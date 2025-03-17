@@ -42,7 +42,7 @@
 | `GET`  | `/v1.0/topology/links` | Obține toate legăturile active din rețea |
 | `GET`  | `/v1.0/topology/hosts` | Obține toate gazdele descoperite |
 
-**Notă:**-`dpid` se referă la **identificatorul datapath** al unui switch OpenFlow.\n- Endpoint-urile suportă cereri și răspunsuri bazate pe JSON.
+**Notă:**-`dpid` se referă la **identificatorul datapath** al unui switch OpenFlow./n- Endpoint-urile suportă cereri și răspunsuri bazate pe JSON.
 
 
 
