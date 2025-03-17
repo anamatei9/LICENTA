@@ -1,7 +1,7 @@
 # RYUDOCS
 ## Endpoint-uri:
 ### ofctl_rest.py 
--interfață REST API pentru controlul și monitorizarea switch-urilor OpenFlow.
+- interfață REST API pentru controlul și monitorizarea switch-urilor OpenFlow.
 
 | Metodă | Endpoint | Descriere |
 |--------|---------|-------------|
@@ -34,7 +34,7 @@
 
 
 ### rest_topology.py 
--interfață REST API pentru descoperirea și obținerea informațiilor despre topologia rețelei.
+- interfață REST API pentru descoperirea și obținerea informațiilor despre topologia rețelei.
 
 | Metodă | Endpoint | Descriere |
 |--------|---------|-------------|
@@ -42,9 +42,8 @@
 | `GET`  | `/v1.0/topology/links` | Obține toate legăturile active din rețea |
 | `GET`  | `/v1.0/topology/hosts` | Obține toate gazdele descoperite |
 
-**Notă:**- Toate parametrele `dpid` se referă la **identificatorul datapath** al unui switch OpenFlow.
-- Endpoint-urile suportă cereri și răspunsuri bazate pe JSON.
-- Aceste API-uri permit controlul și monitorizarea la distanță a rețelelor SDN bazate pe Ryu.
+**Notă:**-`dpid` se referă la **identificatorul datapath** al unui switch OpenFlow.\n- Endpoint-urile suportă cereri și răspunsuri bazate pe JSON.
+
 
 
 
