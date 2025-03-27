@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>SDN API Management UI</title>
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+        <style>
+          body {
+            padding: 20px;
+            background-color: #f8f9fa;
+          }
+          .section-title {
+            margin-top: 40px;
+            margin-bottom: 20px;
+          }
+          textarea {
+            width: 100%;
+            height: 100px;
+          }
+          pre {
+            background-color: #212529;
+            color: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 20px;
+          }
+        </style>
+      </head>
+      <body class="container">
+        <h1 class="text-primary mb-4">🧠 SDN API Management Dashboard</h1>
+        <h2>Switch Information</h2>
+            <input type="text" id="dpid" placeholder="Enter Switch DPID" />
+            <button onclick="callAPI(`/stats/desc/${document.getElementById('dpid').value}`)">Switch Description</button>
+            <button onclick="callAPI(`/stats/table/${document.getElementById('dpid').value}`)">Table Stats</button>
+            <button onclick="callAPI(`/stats/tablefeatures/${document.getElementById('dpid').value}`)">Table Features</button>
+            <button onclick="callAPI(`/stats/port/${document.getElementById('dpid').value}`)">Port Stats</button>
+            <button onclick="callAPI(`/stats/portdesc/${document.getElementById('dpid').value}`)">Port Descriptions</button>
+            <button onclick="callAPI(`/stats/queue/${document.getElementById('dpid').value}`)">Queue Stats</button>
+            <button onclick="callAPI(`/stats/queueconfig/${document.getElementById('dpid').value}`)">Queue Config</button>
+            <button onclick="callAPI(`/stats/queuedesc/${document.getElementById('dpid').value}`)">Queue Description</button>
+            <button onclick="callAPI(`/stats/meterfeatures/${document.getElementById('dpid').value}`)">Meter Features</button>
+            <button onclick="callAPI(`/stats/meterconfig/${document.getElementById('dpid').value}`)">Meter Config</button>
+            <button onclick="callAPI(`/stats/meterdesc/${document.getElementById('dpid').value}`)">Meter Description</button>
+            <button onclick="callAPI(`/stats/meter/${document.getElementById('dpid').value}`)">Meter Stats</button>
+            <button onclick="callAPI(`/stats/groupfeatures/${document.getElementById('dpid').value}`)">Group Features</button>
+            <button onclick="callAPI(`/stats/groupdesc/${document.getElementById('dpid').value}`)">Group Descriptions</button>
+            <button onclick="callAPI(`/stats/group/${document.getElementById('dpid').value}`)">Group Stats</button>
+            <button onclick="callAPI(`/stats/role/${document.getElementById('dpid').value}`)">Controller Role</button>
+            <button onclick="callAPI(`/stats/flowentry/clear/${document.getElementById('dpid').value}`)">Clear Flow Entries</button>
+            <h3>Specific Port Stats and Description</h3>
+            <input type="text" id="port_no" placeholder="Enter Port Number" />
+            <button onclick="callAPI(`/stats/port/${document.getElementById('dpid').value}/${document.getElementById('port_no').value}`)">Port Stats (specific port)</button>
+            <button onclick="callAPI(`/stats/portdesc/${document.getElementById('dpid').value}/${document.getElementById('port_no').value}`)">Port Description (specific port)</button>
+            <h3>Queue Stats and Descriptions</h3>
+            <input type="text" id="queue_port" placeholder="Enter Port Number" />
+            <input type="text" id="queue_id" placeholder="Enter Queue ID" />
+            <button onclick="callAPI(`/stats/queue/${document.getElementById('dpid').value}/${document.getElementById('queue_port').value}`)">Queue Stats per Port</button>
+            <button onclick="callAPI(`/stats/queue/${document.getElementById('dpid').value}/${document.getElementById('queue_port').value}/${document.getElementById('queue_id').value}`)">Specific Queue Stats</button>
+            <button onclick="callAPI(`/stats/queueconfig/${document.getElementById('dpid').value}/${document.getElementById('queue_port').value}`)">Queue Config per Port</button>
+            <button onclick="callAPI(`/stats/queuedesc/${document.getElementById('dpid').value}/${document.getElementById('queue_port').value}`)">Queue Description per Port</button>
+            <button onclick="callAPI(`/stats/queuedesc/${document.getElementById('dpid').value}/${document.getElementById('queue_port').value}/${document.getElementById('queue_id').value}`)">Specific Queue Description</button>
+            <h3>Specific Meter Details</h3>
+            <input type="text" id="meter_id" placeholder="Enter Meter ID" />
+            <button onclick="callAPI(`/stats/meterconfig/${document.getElementById('dpid').value}/${document.getElementById('meter_id').value}`)">Specific Meter Config</button>
+            <button onclick="callAPI(`/stats/meterdesc/${document.getElementById('dpid').value}/${document.getElementById('meter_id').value}`)">Specific Meter Description</button>
+            <button onclick="callAPI(`/stats/meter/${document.getElementById('dpid').value}/${document.getElementById('meter_id').value}`)">Specific Meter Stats</button>
+            <h3>Specific Group Details</h3>
+            <input type="text" id="group_id" placeholder="Enter Group ID" />
+            <button onclick="callAPI(`/stats/groupdesc/${document.getElementById('dpid').value}/${document.getElementById('group_id').value}`)">Specific Group Description</button>
+            <button onclick="callAPI(`/stats/group/${document.getElementById('dpid').value}/${document.getElementById('group_id').value}`)">Specific Group Stats</button>
+            <h3>Flow Management (Modify Flows)</h3>
+            <input type="text" id="flow_cmd" placeholder="Enter Command (add/delete)" />
+            <textarea id="flow_data" placeholder="Enter Flow Data as JSON"></textarea><br>
+            <button onclick="callAPIwithBody(`/stats/flowentry/${document.getElementById('flow_cmd').value}`, 'POST', 'flow_data')">Modify Flow Entries</button>
+            <h3>Meter Entry Management</h3>
+            <input type="text" id="meter_cmd" placeholder="Enter Meter Command (add/delete)" />
+            <textarea id="meter_data" placeholder="Enter Meter Data as JSON"></textarea><br>
+            <button onclick="callAPIwithBody(`/stats/meterentry/${document.getElementById('meter_cmd').value}`, 'POST', 'meter_data')">Modify Meter Entry</button>
+            <h3>Group Entry Management</h3>
+            <input type="text" id="group_cmd" placeholder="Enter Group Command (add/delete)" />
+            <textarea id="group_data" placeholder="Enter Group Data as JSON"></textarea><br>
+            <button onclick="callAPIwithBody(`/stats/groupentry/${document.getElementById('group_cmd').value}`, 'POST', 'group_data')">Modify Group Entry</button>
+            <h3>Port Management (Modify Port)</h3>
+            <input type="text" id="port_cmd" placeholder="Enter Port Command (modify/up/down)" />
+            <textarea id="port_modify_data" placeholder="Enter Port Data as JSON"></textarea><br>
+            <button onclick="callAPIwithBody(`/stats/portdesc/${document.getElementById('port_cmd').value}`, 'POST', 'port_modify_data')">Modify Port Behavior</button>
+
+            <button onclick="callAPI('/stats/switches')">List Switches</button>
+            
+            <h2>Firewall Management</h2>
+            <input type="text" id="switchid" placeholder="Enter Switch ID" />
+            <button onclick="callAPI(`/firewall/module/enable/${document.getElementById('switchid').value}`)">Enable Firewall</button>
+            <button onclick="callAPI(`/firewall/module/disable/${document.getElementById('switchid').value}`)">Disable Firewall</button>
+            <button onclick="callAPI(`/firewall/log/enable/${document.getElementById('switchid').value}`)">Enable Firewall Log</button>
+            <button onclick="callAPI(`/firewall/log/disable/${document.getElementById('switchid').value}`)">Disable Firewall Log</button>
+            <button onclick="callAPI(`/firewall/rules/${document.getElementById('switchid').value}`)">Get Firewall Rules</button>
+
+            <button onclick="callAPI('/firewall/module/status')">Firewall Status</button>
+            <button onclick="callAPI('/firewall/log/status')">Firewall Log Status</button>
+            <h3>Firewall Rules by VLAN</h3>
+            <input type="text" id="firewall_vlanid" placeholder="Enter VLAN ID" />
+            <button onclick="callAPI(`/firewall/rules/${document.getElementById('switchid').value}/${document.getElementById('firewall_vlanid').value}`)">Get Firewall Rules by VLAN</button>
+            <h3>Firewall Rules (Modify)</h3>
+            <textarea id="firewall_rule_data" placeholder="Enter Firewall Rule Data as JSON"></textarea><br>
+            <button onclick="callAPIwithBody(`/firewall/rules/${document.getElementById('switchid').value}`, 'POST', 'firewall_rule_data')">Add Firewall Rule</button>
+            <button onclick="callAPIwithBody(`/firewall/rules/${document.getElementById('switchid').value}`, 'DELETE', 'firewall_rule_data')">Delete Firewall Rule</button>
+            <h3>Firewall Rules by VLAN (Modify)</h3>
+            <input type="text" id="vlanid" placeholder="Enter VLAN ID" />
+            <textarea id="firewall_rule_vlan_data" placeholder="Enter Firewall VLAN Rule Data as JSON"></textarea><br>
+            <button onclick="callAPIwithBody(`/firewall/rules/${document.getElementById('switchid').value}/${document.getElementById('vlanid').value}`, 'POST', 'firewall_rule_vlan_data')">Add VLAN Firewall Rule</button>
+            <button onclick="callAPIwithBody(`/firewall/rules/${document.getElementById('switchid').value}/${document.getElementById('vlanid').value}`, 'DELETE', 'firewall_rule_vlan_data')">Delete VLAN Firewall Rule</button>
+
+
+    <pre id="api-response"></pre>
+
+    <script>
+        // For GET methods without JSON body
+        function callAPI(endpoint) {
+            fetch(endpoint)
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('api-response').textContent = JSON.stringify(data, null, 2);
+                })
+                .catch(error => {
+                    document.getElementById('api-response').textContent = 'Error: ' + error;
+                });
+        }
+    
+        // For POST/DELETE methods with JSON body
+        function callAPIwithBody(endpoint, method, textareaId) {
+            fetch(endpoint, {
+                method: method,
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: document.getElementById(textareaId).value
+            })
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('api-response').textContent = JSON.stringify(data, null, 2);
+            })
+            .catch(error => {
+                document.getElementById('api-response').textContent = 'Error: ' + error;
+            });
+        }
+    </script>
+    
+</body>
+</html>
