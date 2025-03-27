@@ -7,6 +7,8 @@ from flask_jwt_extended import JWTManager
 from .blocklist import BLOCKLIST
 from .models.user import UserModel
 from werkzeug.security import generate_password_hash
+from flask import Flask, render_template, redirect, url_for
+from .resources.role_required import viewer_required, operator_required, admin_required
 
 
 def create_app():
@@ -46,8 +48,18 @@ def create_app():
             {"message": "The token has been revoked.", "error": "token_revoked"},
             401,
         )
+    @jwt.unauthorized_loader
+    def missing_token_callback(error):
+        return redirect(url_for('index'))
 
-    
+    @jwt.invalid_token_loader
+    def invalid_token_callback(error):
+        return redirect(url_for('index'))
+
+    @jwt.expired_token_loader
+    def expired_token_callback(jwt_header, jwt_payload):
+        return redirect(url_for('index'))
+        
     api.init_app(app)
     
     # Register blueprints
@@ -55,45 +67,51 @@ def create_app():
     app.register_blueprint(firewall_blp)
     app.register_blueprint(openflow_blp)
 
-    @app.route("/login")
-    def login():
-        return render_template("login.html")
-    @app.route("/")
-    def home():
-        return '<a href="/docs">Go to Swagger API Documentation</a>'
+    @app.route('/')
+    def index():
+        return render_template('login.html')
     @app.route('/ui')
     def api_ui():
         return render_template('api_ui.html')
+    @app.route('/login')
+    def login():
+        return render_template('login.html')
+
 
     # ✅ Main Pages
     @app.route("/dashboard")
+    @viewer_required 
     def dashboard():
         return render_template("dashboard.html")
 
     @app.route("/stats")
+    @viewer_required 
     def stats():
         return render_template("stats.html")
 
     @app.route("/flow_table")
+    @operator_required
     def flow_table():
         return render_template("flow_table.html")
 
     @app.route("/firewall")
+    @operator_required
     def firewall():
         return render_template("firewall.html")
 
     @app.route("/meter_group")
+    @operator_required
     def meter_group():
         return render_template("meter_group.html")
 
     @app.route("/user_management")
+    @admin_required
     def user_management():
         return render_template("user_management.html")
 
-    # ✅ Logout Route
     @app.route("/logout")
     def logout():
-        return redirect(url_for('login'))  # Redirects to login page
+        return redirect('/')  # Directly redirects to the root URL
 
     return app
 app = create_app()
