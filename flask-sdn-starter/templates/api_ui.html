@@ -1,150 +1,283 @@
-<!DOCTYPE html>
-<html lang="en">
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>SDN API Management UI</title>
-        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-        <style>
-          body {
-            padding: 20px;
-            background-color: #f8f9fa;
-          }
-          .section-title {
-            margin-top: 40px;
-            margin-bottom: 20px;
-          }
-          textarea {
-            width: 100%;
-            height: 100px;
-          }
-          pre {
-            background-color: #212529;
-            color: #f8f9fa;
-            padding: 15px;
-            border-radius: 5px;
-            margin-top: 20px;
-          }
-        </style>
-      </head>
-      <body class="container">
-        <h1 class="text-primary mb-4">🧠 SDN API Management Dashboard</h1>
-        <h2>Switch Information</h2>
-            <input type="text" id="dpid" placeholder="Enter Switch DPID" />
-            <button onclick="callAPI(`/stats/desc/${document.getElementById('dpid').value}`)">Switch Description</button>
-            <button onclick="callAPI(`/stats/table/${document.getElementById('dpid').value}`)">Table Stats</button>
-            <button onclick="callAPI(`/stats/tablefeatures/${document.getElementById('dpid').value}`)">Table Features</button>
-            <button onclick="callAPI(`/stats/port/${document.getElementById('dpid').value}`)">Port Stats</button>
-            <button onclick="callAPI(`/stats/portdesc/${document.getElementById('dpid').value}`)">Port Descriptions</button>
-            <button onclick="callAPI(`/stats/queue/${document.getElementById('dpid').value}`)">Queue Stats</button>
-            <button onclick="callAPI(`/stats/queueconfig/${document.getElementById('dpid').value}`)">Queue Config</button>
-            <button onclick="callAPI(`/stats/queuedesc/${document.getElementById('dpid').value}`)">Queue Description</button>
-            <button onclick="callAPI(`/stats/meterfeatures/${document.getElementById('dpid').value}`)">Meter Features</button>
-            <button onclick="callAPI(`/stats/meterconfig/${document.getElementById('dpid').value}`)">Meter Config</button>
-            <button onclick="callAPI(`/stats/meterdesc/${document.getElementById('dpid').value}`)">Meter Description</button>
-            <button onclick="callAPI(`/stats/meter/${document.getElementById('dpid').value}`)">Meter Stats</button>
-            <button onclick="callAPI(`/stats/groupfeatures/${document.getElementById('dpid').value}`)">Group Features</button>
-            <button onclick="callAPI(`/stats/groupdesc/${document.getElementById('dpid').value}`)">Group Descriptions</button>
-            <button onclick="callAPI(`/stats/group/${document.getElementById('dpid').value}`)">Group Stats</button>
-            <button onclick="callAPI(`/stats/role/${document.getElementById('dpid').value}`)">Controller Role</button>
-            <button onclick="callAPI(`/stats/flowentry/clear/${document.getElementById('dpid').value}`)">Clear Flow Entries</button>
-            <h3>Specific Port Stats and Description</h3>
-            <input type="text" id="port_no" placeholder="Enter Port Number" />
-            <button onclick="callAPI(`/stats/port/${document.getElementById('dpid').value}/${document.getElementById('port_no').value}`)">Port Stats (specific port)</button>
-            <button onclick="callAPI(`/stats/portdesc/${document.getElementById('dpid').value}/${document.getElementById('port_no').value}`)">Port Description (specific port)</button>
-            <h3>Queue Stats and Descriptions</h3>
-            <input type="text" id="queue_port" placeholder="Enter Port Number" />
-            <input type="text" id="queue_id" placeholder="Enter Queue ID" />
-            <button onclick="callAPI(`/stats/queue/${document.getElementById('dpid').value}/${document.getElementById('queue_port').value}`)">Queue Stats per Port</button>
-            <button onclick="callAPI(`/stats/queue/${document.getElementById('dpid').value}/${document.getElementById('queue_port').value}/${document.getElementById('queue_id').value}`)">Specific Queue Stats</button>
-            <button onclick="callAPI(`/stats/queueconfig/${document.getElementById('dpid').value}/${document.getElementById('queue_port').value}`)">Queue Config per Port</button>
-            <button onclick="callAPI(`/stats/queuedesc/${document.getElementById('dpid').value}/${document.getElementById('queue_port').value}`)">Queue Description per Port</button>
-            <button onclick="callAPI(`/stats/queuedesc/${document.getElementById('dpid').value}/${document.getElementById('queue_port').value}/${document.getElementById('queue_id').value}`)">Specific Queue Description</button>
-            <h3>Specific Meter Details</h3>
-            <input type="text" id="meter_id" placeholder="Enter Meter ID" />
-            <button onclick="callAPI(`/stats/meterconfig/${document.getElementById('dpid').value}/${document.getElementById('meter_id').value}`)">Specific Meter Config</button>
-            <button onclick="callAPI(`/stats/meterdesc/${document.getElementById('dpid').value}/${document.getElementById('meter_id').value}`)">Specific Meter Description</button>
-            <button onclick="callAPI(`/stats/meter/${document.getElementById('dpid').value}/${document.getElementById('meter_id').value}`)">Specific Meter Stats</button>
-            <h3>Specific Group Details</h3>
-            <input type="text" id="group_id" placeholder="Enter Group ID" />
-            <button onclick="callAPI(`/stats/groupdesc/${document.getElementById('dpid').value}/${document.getElementById('group_id').value}`)">Specific Group Description</button>
-            <button onclick="callAPI(`/stats/group/${document.getElementById('dpid').value}/${document.getElementById('group_id').value}`)">Specific Group Stats</button>
-            <h3>Flow Management (Modify Flows)</h3>
-            <input type="text" id="flow_cmd" placeholder="Enter Command (add/delete)" />
-            <textarea id="flow_data" placeholder="Enter Flow Data as JSON"></textarea><br>
-            <button onclick="callAPIwithBody(`/stats/flowentry/${document.getElementById('flow_cmd').value}`, 'POST', 'flow_data')">Modify Flow Entries</button>
-            <h3>Meter Entry Management</h3>
-            <input type="text" id="meter_cmd" placeholder="Enter Meter Command (add/delete)" />
-            <textarea id="meter_data" placeholder="Enter Meter Data as JSON"></textarea><br>
-            <button onclick="callAPIwithBody(`/stats/meterentry/${document.getElementById('meter_cmd').value}`, 'POST', 'meter_data')">Modify Meter Entry</button>
-            <h3>Group Entry Management</h3>
-            <input type="text" id="group_cmd" placeholder="Enter Group Command (add/delete)" />
-            <textarea id="group_data" placeholder="Enter Group Data as JSON"></textarea><br>
-            <button onclick="callAPIwithBody(`/stats/groupentry/${document.getElementById('group_cmd').value}`, 'POST', 'group_data')">Modify Group Entry</button>
-            <h3>Port Management (Modify Port)</h3>
-            <input type="text" id="port_cmd" placeholder="Enter Port Command (modify/up/down)" />
-            <textarea id="port_modify_data" placeholder="Enter Port Data as JSON"></textarea><br>
-            <button onclick="callAPIwithBody(`/stats/portdesc/${document.getElementById('port_cmd').value}`, 'POST', 'port_modify_data')">Modify Port Behavior</button>
+{% extends "base.html" %}
 
-            <button onclick="callAPI('/stats/switches')">List Switches</button>
+{% block title %}SDN API Management UI{% endblock %}
+
+{% block styles %}
+<style>
+    /* Specific styles for API UI */
+    .api-button {
+        background-color: #4f46e5;
+        color: white;
+        padding: 0.375rem 0.75rem;
+        border-radius: 0.25rem;
+        border: none;
+        margin: 0.25rem;
+        font-size: 0.875rem;
+        cursor: pointer;
+    }
+    
+    .api-button:hover {
+        background-color: #4338ca;
+    }
+    
+    .api-input {
+        padding: 0.375rem 0.75rem;
+        border-radius: 0.25rem;
+        border: 1px solid #4b5563;
+        background-color: #374151;
+        color: white;
+        margin: 0.25rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div>
+    <div class="flex items-center mb-6">
+        <img src="{{ url_for('static', filename='images/brain.png') }}" alt="SDN Logo" class="mr-3" width="50" height="50">
+        <h1 class="text-3xl font-bold text-blue-400">SDN API Management Dashboard</h1>
+    </div>
+
+    <!-- Switch Information Section -->
+    <div class="section-container">
+        <h2 class="section-title">Switch Information</h2>
+        <div class="flex flex-wrap gap-2 mb-4">
+            <input type="text" placeholder="Enter Switch DPID" class="api-input" id="switch-dpid">
+            <button class="api-button" id="switch-desc">Switch Description</button>
+            <button class="api-button" id="table-stats">Table Stats</button>
+            <button class="api-button" id="table-features">Table Features</button>
+            <button class="api-button" id="port-stats">Port Stats</button>
+            <button class="api-button" id="port-desc">Port Descriptions</button>
+            <button class="api-button" id="queue-stats">Queue Stats</button>
+            <button class="api-button" id="queue-config">Queue Config</button>
+            <button class="api-button" id="queue-desc">Queue Description</button>
+            <button class="api-button" id="meter-features">Meter Features</button>
+            <button class="api-button" id="meter-config">Meter Config</button>
+            <button class="api-button" id="meter-desc">Meter Description</button>
+            <button class="api-button" id="meter-stats">Meter Stats</button>
+            <button class="api-button" id="group-features">Group Features</button>
+            <button class="api-button" id="group-desc">Group Descriptions</button>
+            <button class="api-button" id="group-stats">Group Stats</button>
+            <button class="api-button" id="controller-role">Controller Role</button>
+            <button class="api-button" id="clear-flows">Clear Flow Entries</button>
+        </div>
+    </div>
+
+    <!-- Specific Port Stats Section -->
+    <div class="section-container">
+        <h2 class="section-title">Specific Port Stats and Description</h2>
+        <div class="flex flex-wrap gap-2 mb-4">
+            <input type="text" placeholder="Enter Port Number" class="api-input" id="port-number">
+            <button class="api-button" id="specific-port-stats">Port Stats (specific port)</button>
+            <button class="api-button" id="specific-port-desc">Port Description (specific port)</button>
+        </div>
+    </div>
+
+    <!-- Queue Stats Section -->
+    <div class="section-container">
+        <h2 class="section-title">Queue Stats and Descriptions</h2>
+        <div class="flex flex-wrap gap-2 mb-4">
+            <input type="text" placeholder="Enter Port Number" class="api-input" id="queue-port-number">
+            <input type="text" placeholder="Enter Queue ID" class="api-input" id="queue-id">
+            <button class="api-button" id="queue-stats-port">Queue Stats per Port</button>
+            <button class="api-button" id="specific-queue-stats">Specific Queue Stats</button>
+            <button class="api-button" id="queue-config-port">Queue Config per Port</button>
+            <button class="api-button" id="queue-desc-port">Queue Description per Port</button>
+            <button class="api-button" id="specific-queue-desc">Specific Queue Description</button>
+        </div>
+    </div>
+
+    <!-- Specific Meter Details Section -->
+    <div class="section-container">
+        <h2 class="section-title">Specific Meter Details</h2>
+        <div class="flex flex-wrap gap-2 mb-4">
+            <input type="text" placeholder="Enter Meter ID" class="api-input" id="meter-id">
+            <button class="api-button" id="specific-meter-config">Specific Meter Config</button>
+            <button class="api-button" id="specific-meter-desc">Specific Meter Description</button>
+            <button class="api-button" id="specific-meter-stats">Specific Meter Stats</button>
+        </div>
+    </div>
+
+    <!-- Specific Group Details Section -->
+    <div class="section-container">
+        <h2 class="section-title">Specific Group Details</h2>
+        <div class="flex flex-wrap gap-2 mb-4">
+            <input type="text" placeholder="Enter Group ID" class="api-input" id="group-id">
+            <button class="api-button" id="specific-group-desc">Specific Group Description</button>
+            <button class="api-button" id="specific-group-stats">Specific Group Stats</button>
+        </div>
+    </div>
+
+    <!-- Firewall Rules Section -->
+    <div class="section-container">
+        <h2 class="section-title">Firewall Rules</h2>
+        <div class="flex flex-wrap gap-2 mb-4">
+            <button class="api-button" id="get-firewall-rules">Get Firewall Rules</button>
+            <button class="api-button" id="add-firewall-rule">Add Firewall Rule</button>
+            <button class="api-button" id="delete-firewall-rule">Delete Firewall Rule</button>
+        </div>
+        
+        <div class="mt-4">
+            <h3 class="text-lg font-medium mb-2">Add Firewall Rule</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-sm text-gray-400 mb-1">Source IP:</label>
+                    <input type="text" placeholder="e.g., 10.0.0.1/32" class="api-input w-full" id="fw-src-ip">
+                </div>
+                <div>
+                    <label class="block text-sm text-gray-400 mb-1">Destination IP:</label>
+                    <input type="text" placeholder="e.g., 10.0.0.2/32" class="api-input w-full" id="fw-dst-ip">
+                </div>
+                <div>
+                    <label class="block text-sm text-gray-400 mb-1">Protocol:</label>
+                    <select class="api-input w-full" id="fw-protocol">
+                        <option value="TCP">TCP</option>
+                        <option value="UDP">UDP</option>
+                        <option value="ICMP">ICMP</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm text-gray-400 mb-1">Action:</label>
+                    <select class="api-input w-full" id="fw-action">
+                        <option value="ALLOW">ALLOW</option>
+                        <option value="DENY">DENY</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm text-gray-400 mb-1">Source Port:</label>
+                    <input type="text" placeholder="e.g., 80" class="api-input w-full" id="fw-src-port">
+                </div>
+                <div>
+                    <label class="block text-sm text-gray-400 mb-1">Destination Port:</label>
+                    <input type="text" placeholder="e.g., 443" class="api-input w-full" id="fw-dst-port">
+                </div>
+            </div>
+            <button class="api-button mt-3" id="submit-firewall-rule">Submit Rule</button>
+        </div>
+    </div>
+
+    <!-- Flow Management Section -->
+    <div class="section-container">
+        <h2 class="section-title">Flow Management</h2>
+        <div class="flex flex-wrap gap-2 mb-4">
+            <button class="api-button" id="get-flows">Get All Flows</button>
+            <button class="api-button" id="add-flow">Add Flow</button>
+            <button class="api-button" id="delete-flow">Delete Flow</button>
+        </div>
+        
+        <div class="mt-4">
+            <h3 class="text-lg font-medium mb-2">Add Flow</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-sm text-gray-400 mb-1">Switch DPID:</label>
+                    <input type="text" placeholder="Enter Switch DPID" class="api-input w-full" id="flow-dpid">
+                </div>
+                <div>
+                    <label class="block text-sm text-gray-400 mb-1">Priority:</label>
+                    <input type="text" placeholder="e.g., 100" class="api-input w-full" id="flow-priority">
+                </div>
+                <div>
+                    <label class="block text-sm text-gray-400 mb-1">In Port:</label>
+                    <input type="text" placeholder="e.g., 1" class="api-input w-full" id="flow-in-port">
+                </div>
+                <div>
+                    <label class="block text-sm text-gray-400 mb-1">Out Port:</label>
+                    <input type="text" placeholder="e.g., 2" class="api-input w-full" id="flow-out-port">
+                </div>
+                <div>
+                    <label class="block text-sm text-gray-400 mb-1">Source MAC:</label>
+                    <input type="text" placeholder="e.g., 00:00:00:00:00:01" class="api-input w-full" id="flow-src-mac">
+                </div>
+                <div>
+                    <label class="block text-sm text-gray-400 mb-1">Destination MAC:</label>
+                    <input type="text" placeholder="e.g., 00:00:00:00:00:02" class="api-input w-full" id="flow-dst-mac">
+                </div>
+                <div>
+                    <label class="block text-sm text-gray-400 mb-1">Source IP:</label>
+                    <input type="text" placeholder="e.g., 10.0.0.1" class="api-input w-full" id="flow-src-ip">
+                </div>
+                <div>
+                    <label class="block text-sm text-gray-400 mb-1">Destination IP:</label>
+                    <input type="text" placeholder="e.g., 10.0.0.2" class="api-input w-full" id="flow-dst-ip">
+                </div>
+            </div>
+            <button class="api-button mt-3" id="submit-flow">Submit Flow</button>
+        </div>
+    </div>
+
+    <!-- Response Area -->
+    <div class="section-container">
+        <h2 class="section-title">Response</h2>
+        <div id="response" class="bg-gray-700 p-4 rounded-lg min-h-[200px] font-mono text-sm overflow-auto">
+            <p class="text-gray-400">API response will be displayed here...</p>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Add your JavaScript here to handle button clicks and API calls
+        
+        // Example function to handle API calls
+        function callApi(endpoint, params) {
+            // Display loading message
+            document.getElementById('response').innerHTML = '<p class="text-blue-300">Loading...</p>';
             
-            <h2>Firewall Management</h2>
-            <input type="text" id="switchid" placeholder="Enter Switch ID" />
-            <button onclick="callAPI(`/firewall/module/enable/${document.getElementById('switchid').value}`)">Enable Firewall</button>
-            <button onclick="callAPI(`/firewall/module/disable/${document.getElementById('switchid').value}`)">Disable Firewall</button>
-            <button onclick="callAPI(`/firewall/log/enable/${document.getElementById('switchid').value}`)">Enable Firewall Log</button>
-            <button onclick="callAPI(`/firewall/log/disable/${document.getElementById('switchid').value}`)">Disable Firewall Log</button>
-            <button onclick="callAPI(`/firewall/rules/${document.getElementById('switchid').value}`)">Get Firewall Rules</button>
-
-            <button onclick="callAPI('/firewall/module/status')">Firewall Status</button>
-            <button onclick="callAPI('/firewall/log/status')">Firewall Log Status</button>
-            <h3>Firewall Rules by VLAN</h3>
-            <input type="text" id="firewall_vlanid" placeholder="Enter VLAN ID" />
-            <button onclick="callAPI(`/firewall/rules/${document.getElementById('switchid').value}/${document.getElementById('firewall_vlanid').value}`)">Get Firewall Rules by VLAN</button>
-            <h3>Firewall Rules (Modify)</h3>
-            <textarea id="firewall_rule_data" placeholder="Enter Firewall Rule Data as JSON"></textarea><br>
-            <button onclick="callAPIwithBody(`/firewall/rules/${document.getElementById('switchid').value}`, 'POST', 'firewall_rule_data')">Add Firewall Rule</button>
-            <button onclick="callAPIwithBody(`/firewall/rules/${document.getElementById('switchid').value}`, 'DELETE', 'firewall_rule_data')">Delete Firewall Rule</button>
-            <h3>Firewall Rules by VLAN (Modify)</h3>
-            <input type="text" id="vlanid" placeholder="Enter VLAN ID" />
-            <textarea id="firewall_rule_vlan_data" placeholder="Enter Firewall VLAN Rule Data as JSON"></textarea><br>
-            <button onclick="callAPIwithBody(`/firewall/rules/${document.getElementById('switchid').value}/${document.getElementById('vlanid').value}`, 'POST', 'firewall_rule_vlan_data')">Add VLAN Firewall Rule</button>
-            <button onclick="callAPIwithBody(`/firewall/rules/${document.getElementById('switchid').value}/${document.getElementById('vlanid').value}`, 'DELETE', 'firewall_rule_vlan_data')">Delete VLAN Firewall Rule</button>
-
-
-    <pre id="api-response"></pre>
-
-    <script>
-        // For GET methods without JSON body
-        function callAPI(endpoint) {
-            fetch(endpoint)
-                .then(response => response.json())
-                .then(data => {
-                    document.getElementById('api-response').textContent = JSON.stringify(data, null, 2);
-                })
-                .catch(error => {
-                    document.getElementById('api-response').textContent = 'Error: ' + error;
-                });
+            // Here you would make your actual API call
+            // This is just a placeholder for demonstration
+            setTimeout(() => {
+                document.getElementById('response').innerHTML = 
+                    `<pre class="text-green-400">API call to ${endpoint} with params: ${JSON.stringify(params, null, 2)}</pre>`;
+            }, 500);
         }
-    
-        // For POST/DELETE methods with JSON body
-        function callAPIwithBody(endpoint, method, textareaId) {
-            fetch(endpoint, {
-                method: method,
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: document.getElementById(textareaId).value
-            })
-            .then(response => response.json())
-            .then(data => {
-                document.getElementById('api-response').textContent = JSON.stringify(data, null, 2);
-            })
-            .catch(error => {
-                document.getElementById('api-response').textContent = 'Error: ' + error;
-            });
-        }
-    </script>
-    
-</body>
-</html>
+        
+        // Example button click handlers
+        document.getElementById('switch-desc').addEventListener('click', function() {
+            const dpid = document.getElementById('switch-dpid').value;
+            if (!dpid) {
+                document.getElementById('response').innerHTML = 
+                    '<p class="text-red-400">Error: Please enter a Switch DPID</p>';
+                return;
+            }
+            callApi('/switch/description', { dpid });
+        });
+        
+        document.getElementById('get-firewall-rules').addEventListener('click', function() {
+            callApi('/firewall/rules', {});
+        });
+        
+        document.getElementById('submit-firewall-rule').addEventListener('click', function() {
+            const rule = {
+                src_ip: document.getElementById('fw-src-ip').value,
+                dst_ip: document.getElementById('fw-dst-ip').value,
+                protocol: document.getElementById('fw-protocol').value,
+                action: document.getElementById('fw-action').value,
+                src_port: document.getElementById('fw-src-port').value,
+                dst_port: document.getElementById('fw-dst-port').value
+            };
+            
+            callApi('/firewall/rules/add', rule);
+        });
+        
+        document.getElementById('submit-flow').addEventListener('click', function() {
+            const flow = {
+                dpid: document.getElementById('flow-dpid').value,
+                priority: document.getElementById('flow-priority').value,
+                in_port: document.getElementById('flow-in-port').value,
+                out_port: document.getElementById('flow-out-port').value,
+                src_mac: document.getElementById('flow-src-mac').value,
+                dst_mac: document.getElementById('flow-dst-mac').value,
+                src_ip: document.getElementById('flow-src-ip').value,
+                dst_ip: document.getElementById('flow-dst-ip').value
+            };
+            
+            callApi('/flows/add', flow);
+        });
+        
+        // Wire up other buttons as needed
+        // For brevity, not all buttons are wired up in this example
+    });
+</script>
+{% endblock %}

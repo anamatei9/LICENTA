@@ -3,45 +3,197 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}SDN Management{% endblock %}</title>
-
-    <!-- Bootstrap CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <title>{% block title %}SDN Manager{% endblock %}</title>
+    
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <!-- Your existing styles -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    
+    <style>
+        /* Basic layout styles */
+        body {
+            background-color: #0f1524;
+            color: white;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+        
+        .sidebar-icon {
+            stroke-width: 1.5;
+            width: 18px;
+            height: 18px;
+        }
+        
+        .main-content {
+            margin-left: 250px;
+            padding: 20px;
+        }
+        
+        /* Keep original UI elements styling consistent */
+        input[type="text"], input[type="password"], input[type="number"] {
+            padding: 0.5rem;
+            border-radius: 0.25rem;
+            border: 1px solid #4b5563;
+            background-color: #1f2937;
+            color: white;
+        }
+        
+        button, .btn {
+            background-color: #4f46e5;
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 0.25rem;
+            border: none;
+            cursor: pointer;
+        }
+        
+        button:hover, .btn:hover {
+            background-color: #4338ca;
+        }
+        
+        /* Styling for your API UI */
+        .section-title {
+            font-size: 1.5rem;
+            font-weight: bold;
+            margin-bottom: 1rem;
+            border-bottom: 1px solid #4b5563;
+            padding-bottom: 0.5rem;
+        }
+        
+        .section-container {
+            background-color: #1f2937;
+            border-radius: 0.5rem;
+            padding: 1rem;
+            margin-bottom: 1.5rem;
+        }
+    </style>
+    
+    {% block styles %}{% endblock %}
 </head>
 <body>
+    <!-- Sidebar -->
+    <div class="fixed left-0 top-0 h-screen w-64 bg-gradient-to-b from-gray-800 to-gray-900 flex flex-col border-r border-gray-700 shadow-xl">
+        <!-- Logo -->
+        <div class="p-4 mb-6">
+            <a href="{{ url_for('dashboard') }}" class="flex items-center space-x-2">
+                <div class="text-blue-400 font-bold text-xl">SDN</div>
+                <div class="text-white font-bold text-xl">Manager</div>
+            </a>
+        </div>
 
-    {% if request.path != '/login' %}
-    <!-- ✅ Sidebar layout (for all pages except login) -->
-    <div class="d-flex">
-        <nav class="sidebar bg-dark text-light vh-100 p-3">
-            <h3 class="text-center">Your Logo</h3>
-            <hr>
-            <ul class="nav flex-column">
-                <li class="nav-item"><a class="nav-link text-light" href="{{ url_for('dashboard') }}">Dashboard</a></li>
-                <li class="nav-item"><a class="nav-link text-light" href="{{ url_for('stats') }}">Stats</a></li>
-                <li class="nav-item"><a class="nav-link text-light" href="{{ url_for('flow_table') }}">Flow Table</a></li>
-                <li class="nav-item"><a class="nav-link text-light" href="{{ url_for('firewall') }}">Firewall</a></li>
-                <li class="nav-item"><a class="nav-link text-light" href="{{ url_for('meter_group') }}">Meter & Group Table</a></li>
-                <li class="nav-item"><a class="nav-link text-light" href="{{ url_for('user_management') }}">User Management</a></li>
-                <li class="nav-item"><a class="nav-link text-light" href="{{ url_for('logout') }}">Logout</a></li>
-            </ul>
-        </nav>
+        <!-- User Profile -->
+        <div class="px-4 py-3 mx-3 bg-gray-700 rounded-lg mb-6">
+            <div class="flex items-center">
+                <div class="w-10 h-10 rounded-full bg-blue-500 mr-3 flex items-center justify-center">
+                    <span class="text-sm font-bold">
+                        {% if session.get('username') %}
+                            {{ session.get('username')[0].upper() }}
+                        {% else %}
+                            A
+                        {% endif %}
+                    </span>
+                </div>
+                <div>
+                    <div class="text-sm font-medium">
+                        {% if session.get('username') %}
+                            {{ session.get('username') }}
+                        {% else %}
+                            Admin
+                        {% endif %}
+                    </div>
+                    <div class="text-xs text-gray-400">Network Administrator</div>
+                </div>
+            </div>
+        </div>
 
-        <!-- ✅ Main Page Content -->
-        <div class="content flex-grow-1 p-4">
-            {% block content %}{% endblock %}  <!-- ✅ ONLY ONE `content` block here -->
+        <!-- Navigation -->
+        <div class="flex-1 overflow-y-auto px-3">
+            <a href="{{ url_for('dashboard') }}"
+            class="flex items-center px-3 py-2 mb-2 rounded-lg {% if request.endpoint == 'dashboard' %}bg-indigo-700{% else %}hover:bg-gray-700{% endif %}">
+                <div class="mr-3 text-gray-400">
+                    <i data-lucide="home" class="sidebar-icon"></i>
+                </div>
+                <span>Dashboard</span>
+            </a>
+            
+            <a href="{{ url_for('api_ui') }}"
+               class="flex items-center px-3 py-2 mb-2 rounded-lg {% if request.endpoint == 'ui' %}bg-indigo-700{% else %}hover:bg-gray-700{% endif %}">
+                <div class="mr-3 text-gray-400">
+                    <i data-lucide="terminal" class="sidebar-icon"></i>
+                </div>
+                <span>SDN API</span>
+            </a>
+            
+            <a href="{{ url_for('api_ui') }}"
+            class="flex items-center px-3 py-2 mb-2 rounded-lg {% if request.endpoint == 'ui' %}bg-indigo-700{% else %}hover:bg-gray-700{% endif %}">
+                <div class="mr-3 text-gray-400">
+                    <i data-lucide="git-branch" class="sidebar-icon"></i>
+                </div>
+                <span>Flow Table</span>
+            </a>
+            
+            <a href="{{ url_for('meter_group') }}" 
+               class="flex items-center px-3 py-2 mb-2 rounded-lg {% if request.endpoint == 'meter_group' %}bg-indigo-700{% else %}hover:bg-gray-700{% endif %}">
+                <div class="mr-3 text-gray-400">
+                    <i data-lucide="gauge" class="sidebar-icon"></i>
+                </div>
+                <span>Meter & Group</span>
+            </a>
+            
+            <a href="{{ url_for('stats') }}" 
+               class="flex items-center px-3 py-2 mb-2 rounded-lg {% if request.endpoint == 'stats' %}bg-indigo-700{% else %}hover:bg-gray-700{% endif %}">
+                <div class="mr-3 text-gray-400">
+                    <i data-lucide="bar-chart-2" class="sidebar-icon"></i>
+                </div>
+                <span>Statistics</span>
+            </a>
+            
+            <a href="{{ url_for('firewall') }}" 
+               class="flex items-center px-3 py-2 mb-2 rounded-lg {% if request.endpoint == 'firewall' %}bg-indigo-700{% else %}hover:bg-gray-700{% endif %}">
+                <div class="mr-3 text-gray-400">
+                    <i data-lucide="shield" class="sidebar-icon"></i>
+                </div>
+                <span>Firewall</span>
+            </a>
+            
+            <a href="{{ url_for('user_management') }}" 
+               class="flex items-center px-3 py-2 mb-2 rounded-lg {% if request.endpoint == 'user_management' %}bg-indigo-700{% else %}hover:bg-gray-700{% endif %}">
+                <div class="mr-3 text-gray-400">
+                    <i data-lucide="users" class="sidebar-icon"></i>
+                </div>
+                <span>User Management</span>
+            </a>
+        </div>
+
+        <!-- Logout -->
+        <div class="p-4 mt-auto">
+            <a href="{{ url_for('logout') }}" 
+               class="flex items-center px-3 py-2 rounded-lg text-red-400 hover:bg-gray-700">
+                <div class="mr-3">
+                    <i data-lucide="log-out" class="sidebar-icon"></i>
+                </div>
+                <span>Logout</span>
+            </a>
         </div>
     </div>
-    {% else %}
-    <!-- ✅ Login Page Layout (NO SIDEBAR) -->
-    <div class="login-container">
-        {% block content %}{% endblock %}  <!-- ✅ Still only ONE `content` block -->
+
+    <!-- Main Content -->
+    <div class="main-content">
+        {% block content %}{% endblock %}
     </div>
-    {% endif %}
 
-    <!-- Bootstrap JS -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-
+    <!-- Initialize icons -->
+    <script>
+        lucide.createIcons();
+    </script>
+    
+    <!-- Include any additional scripts -->
+    {% block scripts %}{% endblock %}
 </body>
 </html>
