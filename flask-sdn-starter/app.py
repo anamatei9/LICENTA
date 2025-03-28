@@ -61,7 +61,19 @@ def create_app():
         return redirect(url_for('index'))
         
     api.init_app(app)
-    
+    @app.before_request
+    def check_jwt_cookie():
+        from flask import request
+        
+        # Skip for login and static routes
+        if request.path == '/' or request.path == '/login' or request.path.startswith('/static'):
+            return
+            
+        # Check for token in cookies
+        token = request.cookies.get('access_token')
+        if token:
+            # Add to request headers
+            request.environ['HTTP_AUTHORIZATION'] = f'Bearer {token}'
     # Register blueprints
     app.register_blueprint(auth_blp)
     app.register_blueprint(firewall_blp)
@@ -79,8 +91,8 @@ def create_app():
 
 
     # ✅ Main Pages
-    @app.route("/dashboard")
-    @viewer_required 
+    @app.route("/dashboard", methods=["GET", "POST"])
+    @viewer_required
     def dashboard():
         return render_template("dashboard.html")
 

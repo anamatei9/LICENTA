@@ -197,6 +197,14 @@
      <!-- Auth management script -->
     <script src="{{ url_for('static', filename='js/auth.js') }}"></script>
     {% block scripts %}{% endblock %}
+    <!-- Add this right before the closing </body> tag -->
+<script>
+    console.log("Base template loaded");
+    // Check if auth.js loaded
+    if (typeof authJsLoaded === 'undefined') {
+        console.error("auth.js did not load properly");
+    }
+</script>
 
 </body>
 </html>
