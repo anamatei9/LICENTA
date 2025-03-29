@@ -1,8 +1,649 @@
 {% extends "base.html" %}
 
-{% block title %}Firewall{% endblock %}
-{% block page_title %}Firewall Rules{% endblock %}
+{% block title %}Firewall Management{% endblock %}
+
+{% block styles %}
+<style>
+    /* Main containers */
+    .section-container {
+        background-color: #1e2232;
+        padding: 1.5rem;
+        border-radius: 0.5rem;
+        margin-bottom: 1.5rem;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+    
+    .section-title {
+        color: #60a5fa;
+        margin-bottom: 1rem;
+        font-size: 1.25rem;
+        font-weight: 600;
+    }
+    
+    /* Buttons and inputs */
+    .api-button {
+        background-color: #4f46e5;
+        color: white;
+        padding: 0.375rem 0.75rem;
+        border-radius: 0.25rem;
+        border: none;
+        margin: 0.25rem;
+        font-size: 0.875rem;
+        cursor: pointer;
+        transition: background-color 0.2s;
+    }
+    
+    .api-button:hover {
+        background-color: #4338ca;
+    }
+    
+    .api-button:active {
+        background-color: #3730a3;
+    }
+    
+    .api-input {
+        padding: 0.375rem 0.75rem;
+        border-radius: 0.25rem;
+        border: 1px solid #4b5563;
+        background-color: #374151;
+        color: white;
+        margin: 0.25rem;
+    }
+    
+    /* Response area */
+    #api-response {
+        background-color: #111827;
+        color: #d1d5db;
+        padding: 1rem;
+        border-radius: 0.375rem;
+        font-family: monospace;
+        font-size: 0.875rem;
+        white-space: pre-wrap;
+        min-height: 200px;
+        max-height: 500px;
+        overflow-y: auto;
+    }
+    
+    #api-response.error {
+        color: #f87171;
+    }
+    
+    #api-response.loading {
+        color: #60a5fa;
+    }
+    
+    /* Grid layout for form inputs */
+    .form-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+        gap: 1rem;
+    }
+    
+    /* Form field groups */
+    .form-group {
+        display: flex;
+        flex-direction: column;
+        margin-bottom: 0.75rem;
+    }
+    
+    .form-group label {
+        font-size: 0.875rem;
+        color: #9ca3af;
+        margin-bottom: 0.25rem;
+    }
+    
+    /* Tab styling */
+    .tab-container {
+        display: flex;
+        border-bottom: 1px solid #4b5563;
+        margin-bottom: 1rem;
+    }
+    
+    .tab {
+        padding: 0.5rem 1rem;
+        cursor: pointer;
+        color: #9ca3af;
+        border-bottom: 2px solid transparent;
+    }
+    
+    .tab.active {
+        color: #60a5fa;
+        border-bottom: 2px solid #60a5fa;
+    }
+    
+    .tab-content {
+        display: none;
+    }
+    
+    .tab-content.active {
+        display: block;
+    }
+    
+    /* Switch toggle styles */
+    .switch-toggle {
+        position: relative;
+        display: inline-block;
+        width: 60px;
+        height: 30px;
+    }
+    
+    .switch-toggle input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+    }
+    
+    .slider {
+        position: absolute;
+        cursor: pointer;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: #374151;
+        transition: .4s;
+        border-radius: 30px;
+    }
+    
+    .slider:before {
+        position: absolute;
+        content: "";
+        height: 22px;
+        width: 22px;
+        left: 4px;
+        bottom: 4px;
+        background-color: white;
+        transition: .4s;
+        border-radius: 50%;
+    }
+    
+    input:checked + .slider {
+        background-color: #4f46e5;
+    }
+    
+    input:checked + .slider:before {
+        transform: translateX(30px);
+    }
+    
+    /* Rules list styling */
+    .rules-list {
+        border: 1px solid #4b5563;
+        border-radius: 0.375rem;
+        max-height: 300px;
+        overflow-y: auto;
+    }
+    
+    .rule-item {
+        padding: 0.75rem;
+        border-bottom: 1px solid #4b5563;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    
+    .rule-item:last-child {
+        border-bottom: none;
+    }
+    
+    .rule-priority {
+        color: #60a5fa;
+        font-weight: 600;
+    }
+    
+    .rule-action {
+        font-weight: 600;
+    }
+    
+    .rule-action.allow {
+        color: #34d399;
+    }
+    
+    .rule-action.deny {
+        color: #f87171;
+    }
+</style>
+{% endblock %}
 
 {% block content %}
-    <p>Firewall settings will go here.</p>
+<div>
+    <div class="flex items-center mb-6">
+        <img src="{{ url_for('static', filename='images/firewall.png') }}" alt="Firewall Logo" class="mr-3" width="50" height="50">
+        <h1 class="text-3xl font-bold text-blue-400">Firewall Management</h1>
+    </div>
+
+    <div class="tab-container">
+        <div class="tab active" data-tab="status">Status</div>
+        <div class="tab" data-tab="rules">Rules</div>
+        <div class="tab" data-tab="create">Create Rule</div>
+    </div>
+    
+    <!-- STATUS SECTION -->
+    <div id="status-content" class="tab-content active">
+        <!-- Firewall Module Status Section -->
+        <div class="section-container">
+            <h2 class="section-title">Firewall Module Status</h2>
+            <div class="form-group">
+                <button class="api-button" id="get-firewall-status">Get Status of All Firewall Switches</button>
+            </div>
+            
+            <div class="form-group mt-4">
+                <label>Enable/Disable Firewall for Switch:</label>
+                <div class="flex flex-wrap items-center gap-2">
+                    <input type="text" placeholder="Switch ID or 'all'" class="api-input" id="firewall-switch-id">
+                    <button class="api-button" id="enable-firewall">Enable Firewall</button>
+                    <button class="api-button" id="disable-firewall">Disable Firewall</button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Firewall Log Status Section -->
+        <div class="section-container">
+            <h2 class="section-title">Firewall Log Status</h2>
+            <div class="form-group">
+                <button class="api-button" id="get-firewall-log-status">Get Log Status of All Firewall Switches</button>
+            </div>
+            
+            <div class="form-group mt-4">
+                <label>Enable/Disable Firewall Logging for Switch:</label>
+                <div class="flex flex-wrap items-center gap-2">
+                    <input type="text" placeholder="Switch ID or 'all'" class="api-input" id="firewall-log-switch-id">
+                    <button class="api-button" id="enable-firewall-log">Enable Firewall Logging</button>
+                    <button class="api-button" id="disable-firewall-log">Disable Firewall Logging</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- RULES SECTION -->
+    <div id="rules-content" class="tab-content">
+        <!-- Get Firewall Rules Section -->
+        <div class="section-container">
+            <h2 class="section-title">View Firewall Rules</h2>
+            <div class="form-group">
+                <label>For Switch/VLAN:</label>
+                <div class="flex flex-wrap items-center gap-2">
+                    <input type="text" placeholder="Switch ID or 'all'" class="api-input" id="view-rules-switch-id">
+                    <input type="text" placeholder="VLAN ID (optional)" class="api-input" id="view-rules-vlan-id">
+                    <button class="api-button" id="get-firewall-rules">Get Firewall Rules</button>
+                </div>
+            </div>
+            
+            <div class="form-group mt-4">
+                <label>Delete Rule:</label>
+                <div class="flex flex-wrap items-center gap-2">
+                    <input type="text" placeholder="Switch ID" class="api-input" id="delete-rule-switch-id">
+                    <input type="text" placeholder="VLAN ID (optional)" class="api-input" id="delete-rule-vlan-id">
+                    <input type="text" placeholder="Rule ID or 'all'" class="api-input" id="delete-rule-id">
+                    <button class="api-button" id="delete-firewall-rule">Delete Rule</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- CREATE RULE SECTION -->
+    <div id="create-content" class="tab-content">
+        <!-- Create Firewall Rule Section -->
+        <div class="section-container">
+            <h2 class="section-title">Create Firewall Rule</h2>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>Switch ID:</label>
+                    <input type="text" placeholder="Enter Switch ID" class="api-input w-full" id="create-rule-switch-id" required>
+                </div>
+                
+                <div class="form-group">
+                    <label>VLAN ID (optional):</label>
+                    <input type="text" placeholder="VLAN ID (optional)" class="api-input w-full" id="create-rule-vlan-id">
+                </div>
+                
+                <div class="form-group">
+                    <label>Priority (0-65533):</label>
+                    <input type="number" min="0" max="65533" placeholder="0 to 65533" class="api-input w-full" id="create-rule-priority">
+                </div>
+                
+                <div class="form-group">
+                    <label>Action:</label>
+                    <select class="api-input w-full" id="create-rule-action">
+                        <option value="ALLOW">ALLOW</option>
+                        <option value="DENY">DENY</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label>In Port:</label>
+                    <input type="number" placeholder="Input port" class="api-input w-full" id="create-rule-in-port">
+                </div>
+                
+                <div class="form-group">
+                    <label>Source MAC (xx:xx:xx:xx:xx:xx):</label>
+                    <input type="text" placeholder="e.g., 00:00:00:00:00:01" class="api-input w-full" id="create-rule-dl-src">
+                </div>
+                
+                <div class="form-group">
+                    <label>Destination MAC (xx:xx:xx:xx:xx:xx):</label>
+                    <input type="text" placeholder="e.g., 00:00:00:00:00:01" class="api-input w-full" id="create-rule-dl-dst">
+                </div>
+                
+                <div class="form-group">
+                    <label>Ethernet Type:</label>
+                    <select class="api-input w-full" id="create-rule-dl-type">
+                        <option value="">Select Type</option>
+                        <option value="ARP">ARP</option>
+                        <option value="IPv4">IPv4</option>
+                        <option value="IPv6">IPv6</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label>Source IP (A.B.C.D/M):</label>
+                    <input type="text" placeholder="e.g., 192.168.1.0/24" class="api-input w-full" id="create-rule-nw-src">
+                </div>
+                
+                <div class="form-group">
+                    <label>Destination IP (A.B.C.D/M):</label>
+                    <input type="text" placeholder="e.g., 192.168.2.0/24" class="api-input w-full" id="create-rule-nw-dst">
+                </div>
+                
+                <div class="form-group">
+                    <label>IPv6 Source:</label>
+                    <input type="text" placeholder="xxxx:xxxx:xxxx:xxxx:xxxx:xxxx:xxxx:xxxx/M" class="api-input w-full" id="create-rule-ipv6-src">
+                </div>
+                
+                <div class="form-group">
+                    <label>IPv6 Destination:</label>
+                    <input type="text" placeholder="xxxx:xxxx:xxxx:xxxx:xxxx:xxxx:xxxx:xxxx/M" class="api-input w-full" id="create-rule-ipv6-dst">
+                </div>
+                
+                <div class="form-group">
+                    <label>IP Protocol:</label>
+                    <select class="api-input w-full" id="create-rule-nw-proto">
+                        <option value="">Select Protocol</option>
+                        <option value="TCP">TCP</option>
+                        <option value="UDP">UDP</option>
+                        <option value="ICMP">ICMP</option>
+                        <option value="ICMPv6">ICMPv6</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label>Source Port:</label>
+                    <input type="number" placeholder="TCP/UDP source port" class="api-input w-full" id="create-rule-tp-src">
+                </div>
+                
+                <div class="form-group">
+                    <label>Destination Port:</label>
+                    <input type="number" placeholder="TCP/UDP destination port" class="api-input w-full" id="create-rule-tp-dst">
+                </div>
+            </div>
+            
+            <button class="api-button mt-4" id="create-firewall-rule">Create Firewall Rule</button>
+        </div>
+    </div>
+
+    <!-- Response Area -->
+    <div class="section-container">
+        <h2 class="section-title">Response</h2>
+        <div id="api-response">
+            <p>API response will be displayed here...</p>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Wait for document to be fully loaded
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize the response area
+    const responseArea = document.getElementById('api-response');
+    
+    // Tab switching functionality
+    const tabs = document.querySelectorAll('.tab');
+    const tabContents = document.querySelectorAll('.tab-content');
+    
+    tabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+            // Remove active class from all tabs
+            tabs.forEach(t => t.classList.remove('active'));
+            tabContents.forEach(c => c.classList.remove('active'));
+            
+            // Add active class to clicked tab and its content
+            tab.classList.add('active');
+            const tabId = tab.getAttribute('data-tab');
+            document.getElementById(`${tabId}-content`).classList.add('active');
+        });
+    });
+    
+    /**
+     * Common function to make API calls with proper error handling
+     * @param {string} endpoint - API endpoint to call
+     * @param {string} method - HTTP method (GET, POST, PUT, DELETE)
+     * @param {object|null} data - Request body data (for POST/PUT)
+     */
+    async function callApi(endpoint, method = 'GET', data = null) {
+        // Show loading indicator
+        responseArea.textContent = 'Loading...';
+        responseArea.classList.add('loading');
+        responseArea.classList.remove('error');
+        
+        try {
+            // Prepare request options
+            const options = {
+                method: method,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                },
+                credentials: 'same-origin' // Important for cookie-based authentication
+            };
+            
+            // Add request body for POST/PUT/DELETE requests
+            if (data && ['POST', 'PUT', 'DELETE'].includes(method)) {
+                options.body = JSON.stringify(data);
+            }
+            
+            // Make the API call
+            const response = await fetch(endpoint, options);
+            
+            // Check if response is OK
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(`API Error (${response.status}): ${errorText}`);
+            }
+            
+            // Parse and display response
+            const responseData = await response.json();
+            responseArea.textContent = JSON.stringify(responseData, null, 2);
+            responseArea.classList.remove('loading');
+            
+            return responseData;
+        } catch (error) {
+            // Display error message
+            responseArea.textContent = `Error: ${error.message}`;
+            responseArea.classList.remove('loading');
+            responseArea.classList.add('error');
+            console.error(error);
+        }
+    }
+    
+    /**
+     * Helper to get value from an input element
+     * @param {string} id - Element ID
+     * @returns {string} - Element value or empty string if not found
+     */
+    function getValue(id) {
+        const element = document.getElementById(id);
+        return element ? element.value.trim() : '';
+    }
+    
+    // ========== FIREWALL STATUS SECTION ==========
+    
+    // Get firewall module status
+    document.getElementById('get-firewall-status').addEventListener('click', function() {
+        callApi('/firewall/module/status');
+    });
+    
+    // Enable firewall
+    document.getElementById('enable-firewall').addEventListener('click', function() {
+        const switchId = getValue('firewall-switch-id');
+        if (!switchId) {
+            responseArea.textContent = 'Error: Please enter a Switch ID';
+            responseArea.classList.add('error');
+            return;
+        }
+        callApi(`/firewall/module/enable/${switchId}`, 'PUT');
+    });
+    
+    // Disable firewall
+    document.getElementById('disable-firewall').addEventListener('click', function() {
+        const switchId = getValue('firewall-switch-id');
+        if (!switchId) {
+            responseArea.textContent = 'Error: Please enter a Switch ID';
+            responseArea.classList.add('error');
+            return;
+        }
+        callApi(`/firewall/module/disable/${switchId}`, 'PUT');
+    });
+    
+    // Get firewall log status
+    document.getElementById('get-firewall-log-status').addEventListener('click', function() {
+        callApi('/firewall/log/status');
+    });
+    
+    // Enable firewall logging
+    document.getElementById('enable-firewall-log').addEventListener('click', function() {
+        const switchId = getValue('firewall-log-switch-id');
+        if (!switchId) {
+            responseArea.textContent = 'Error: Please enter a Switch ID';
+            responseArea.classList.add('error');
+            return;
+        }
+        callApi(`/firewall/log/enable/${switchId}`, 'PUT');
+    });
+    
+    // Disable firewall logging
+    document.getElementById('disable-firewall-log').addEventListener('click', function() {
+        const switchId = getValue('firewall-log-switch-id');
+        if (!switchId) {
+            responseArea.textContent = 'Error: Please enter a Switch ID';
+            responseArea.classList.add('error');
+            return;
+        }
+        callApi(`/firewall/log/disable/${switchId}`, 'PUT');
+    });
+    
+    // ========== FIREWALL RULES SECTION ==========
+    
+    // Get firewall rules
+    document.getElementById('get-firewall-rules').addEventListener('click', function() {
+        const switchId = getValue('view-rules-switch-id');
+        const vlanId = getValue('view-rules-vlan-id');
+        
+        if (!switchId) {
+            responseArea.textContent = 'Error: Please enter a Switch ID';
+            responseArea.classList.add('error');
+            return;
+        }
+        
+        const endpoint = vlanId ? 
+            `/firewall/rules/${switchId}/${vlanId}` : 
+            `/firewall/rules/${switchId}`;
+            
+        callApi(endpoint);
+    });
+    
+    // Delete firewall rule
+    document.getElementById('delete-firewall-rule').addEventListener('click', function() {
+        const switchId = getValue('delete-rule-switch-id');
+        const vlanId = getValue('delete-rule-vlan-id');
+        const ruleId = getValue('delete-rule-id');
+        
+        if (!switchId) {
+            responseArea.textContent = 'Error: Please enter a Switch ID';
+            responseArea.classList.add('error');
+            return;
+        }
+        
+        if (!ruleId) {
+            responseArea.textContent = 'Error: Please enter a Rule ID or "all"';
+            responseArea.classList.add('error');
+            return;
+        }
+        
+        const endpoint = vlanId ? 
+            `/firewall/rules/${switchId}/${vlanId}` : 
+            `/firewall/rules/${switchId}`;
+            
+        callApi(endpoint, 'DELETE', { rule_id: ruleId });
+    });
+    
+    // ========== CREATE FIREWALL RULE SECTION ==========
+    
+    // Create firewall rule
+    document.getElementById('create-firewall-rule').addEventListener('click', function() {
+        const switchId = getValue('create-rule-switch-id');
+        const vlanId = getValue('create-rule-vlan-id');
+        
+        if (!switchId) {
+            responseArea.textContent = 'Error: Please enter a Switch ID';
+            responseArea.classList.add('error');
+            return;
+        }
+        
+        // Build the rule data object, only including fields that have values
+        const ruleData = {};
+        
+        // Required fields
+        if (getValue('create-rule-priority')) {
+            ruleData.priority = parseInt(getValue('create-rule-priority'));
+        }
+        
+        if (getValue('create-rule-action')) {
+            ruleData.actions = getValue('create-rule-action');
+        }
+        
+        // Optional fields
+        const optionalFields = [
+            { id: 'create-rule-in-port', field: 'in_port', type: 'int' },
+            { id: 'create-rule-dl-src', field: 'dl_src', type: 'string' },
+            { id: 'create-rule-dl-dst', field: 'dl_dst', type: 'string' },
+            { id: 'create-rule-dl-type', field: 'dl_type', type: 'string' },
+            { id: 'create-rule-nw-src', field: 'nw_src', type: 'string' },
+            { id: 'create-rule-nw-dst', field: 'nw_dst', type: 'string' },
+            { id: 'create-rule-ipv6-src', field: 'ipv6_src', type: 'string' },
+            { id: 'create-rule-ipv6-dst', field: 'ipv6_dst', type: 'string' },
+            { id: 'create-rule-nw-proto', field: 'nw_proto', type: 'string' },
+            { id: 'create-rule-tp-src', field: 'tp_src', type: 'int' },
+            { id: 'create-rule-tp-dst', field: 'tp_dst', type: 'int' }
+        ];
+        
+        optionalFields.forEach(field => {
+            const value = getValue(field.id);
+            if (value) {
+                if (field.type === 'int') {
+                    ruleData[field.field] = parseInt(value);
+                } else {
+                    ruleData[field.field] = value;
+                }
+            }
+        });
+        
+        // Special handling for IP fields when dl_type is not explicitly set
+        if ((ruleData.nw_src || ruleData.nw_dst) && !ruleData.dl_type) {
+            ruleData.dl_type = 'IPv4';
+        }
+        
+        if ((ruleData.ipv6_src || ruleData.ipv6_dst) && !ruleData.dl_type) {
+            ruleData.dl_type = 'IPv6';
+        }
+        
+        // Determine the endpoint based on vlanId
+        const endpoint = vlanId ? 
+            `/firewall/rules/${switchId}/${vlanId}` : 
+            `/firewall/rules/${switchId}`;
+            
+        callApi(endpoint, 'POST', ruleData);
+    });
+});
+</script>
 {% endblock %}

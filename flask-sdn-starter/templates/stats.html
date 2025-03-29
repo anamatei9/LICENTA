@@ -1,8 +1,520 @@
 {% extends "base.html" %}
 
-{% block title %}Stats{% endblock %}
-{% block page_title %}Network Statistics{% endblock %}
+{% block title %}Network Statistics{% endblock %}
+
+{% block styles %}
+<style>
+    /* Main containers */
+    .section-container {
+        background-color: #1e2232;
+        padding: 1.5rem;
+        border-radius: 0.5rem;
+        margin-bottom: 1.5rem;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+    
+    .section-title {
+        color: #60a5fa;
+        margin-bottom: 1rem;
+        font-size: 1.25rem;
+        font-weight: 600;
+    }
+    
+    /* Buttons and inputs */
+    .api-button {
+        background-color: #4f46e5;
+        color: white;
+        padding: 0.375rem 0.75rem;
+        border-radius: 0.25rem;
+        border: none;
+        margin: 0.25rem;
+        font-size: 0.875rem;
+        cursor: pointer;
+        transition: background-color 0.2s;
+    }
+    
+    .api-button:hover {
+        background-color: #4338ca;
+    }
+    
+    .api-button:active {
+        background-color: #3730a3;
+    }
+    
+    .api-input {
+        padding: 0.375rem 0.75rem;
+        border-radius: 0.25rem;
+        border: 1px solid #4b5563;
+        background-color: #374151;
+        color: white;
+        margin: 0.25rem;
+    }
+    
+    /* Response area */
+    #api-response {
+        background-color: #111827;
+        color: #d1d5db;
+        padding: 1rem;
+        border-radius: 0.375rem;
+        font-family: monospace;
+        font-size: 0.875rem;
+        white-space: pre-wrap;
+        min-height: 200px;
+        max-height: 500px;
+        overflow-y: auto;
+    }
+    
+    #api-response.error {
+        color: #f87171;
+    }
+    
+    #api-response.loading {
+        color: #60a5fa;
+    }
+    
+    /* Grid layout for form inputs */
+    .form-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: 1rem;
+    }
+    
+    /* Form field groups */
+    .form-group {
+        display: flex;
+        flex-direction: column;
+        margin-bottom: 0.75rem;
+    }
+    
+    .form-group label {
+        font-size: 0.875rem;
+        color: #9ca3af;
+        margin-bottom: 0.25rem;
+    }
+    
+    /* Tab styling */
+    .tab-container {
+        display: flex;
+        border-bottom: 1px solid #4b5563;
+        margin-bottom: 1rem;
+    }
+    
+    .tab {
+        padding: 0.5rem 1rem;
+        cursor: pointer;
+        color: #9ca3af;
+        border-bottom: 2px solid transparent;
+    }
+    
+    .tab.active {
+        color: #60a5fa;
+        border-bottom: 2px solid #60a5fa;
+    }
+    
+    .tab-content {
+        display: none;
+    }
+    
+    .tab-content.active {
+        display: block;
+    }
+</style>
+{% endblock %}
 
 {% block content %}
-    <p>Statistics will be displayed here.</p>
+<div>
+    <div class="flex items-center mb-6">
+        <img src="{{ url_for('static', filename='images/brain.png') }}" alt="SDN Logo" class="mr-3" width="50" height="50">
+        <h1 class="text-3xl font-bold text-blue-400">Network Statistics & Topology</h1>
+    </div>
+
+    <div class="tab-container">
+        <div class="tab active" data-tab="switches">Switches</div>
+        <div class="tab" data-tab="ports">Ports</div>
+        <div class="tab" data-tab="topology">Topology</div>
+    </div>
+    
+    <!-- SWITCHES SECTION -->
+    <div id="switches-content" class="tab-content active">
+        <!-- Switch List Section -->
+        <div class="section-container">
+            <h2 class="section-title">All Switches</h2>
+            <div class="form-group">
+                <button class="api-button" id="get-all-switches">List All Switches</button>
+            </div>
+        </div>
+        
+        <!-- Switch Description Section -->
+        <div class="section-container">
+            <h2 class="section-title">Switch Description</h2>
+            <div class="form-group">
+                <label>Switch DPID:</label>
+                <input type="text" placeholder="Enter DPID (hex)" class="api-input w-full" id="switch-desc-dpid">
+                <button class="api-button mt-2" id="get-switch-desc">Get Switch Description</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- PORTS SECTION -->
+    <div id="ports-content" class="tab-content">
+        <!-- Port Stats Section -->
+        <div class="section-container">
+            <h2 class="section-title">Port Statistics</h2>
+            <div class="form-group">
+                <label>Port Stats for All Ports:</label>
+                <div class="flex items-center">
+                    <input type="text" placeholder="Enter DPID (hex)" class="api-input w-full" id="port-stats-dpid">
+                    <button class="api-button ml-2" id="get-port-stats">Get All Port Stats</button>
+                </div>
+            </div>
+            
+            <div class="form-group mt-4">
+                <label>Port Stats for Specific Port:</label>
+                <div class="flex flex-wrap items-center gap-2">
+                    <input type="text" placeholder="Enter DPID (hex)" class="api-input" id="specific-port-stats-dpid">
+                    <input type="text" placeholder="Enter Port Number" class="api-input" id="specific-port-stats-port">
+                    <button class="api-button" id="get-specific-port-stats">Get Specific Port Stats</button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Port Description Section -->
+        <div class="section-container">
+            <h2 class="section-title">Port Descriptions</h2>
+            <div class="form-group">
+                <label>Port Descriptions for All Ports:</label>
+                <div class="flex items-center">
+                    <input type="text" placeholder="Enter DPID (hex)" class="api-input w-full" id="port-desc-dpid">
+                    <button class="api-button ml-2" id="get-port-desc">Get All Port Descriptions</button>
+                </div>
+            </div>
+            
+            <div class="form-group mt-4">
+                <label>Port Description for Specific Port:</label>
+                <div class="flex flex-wrap items-center gap-2">
+                    <input type="text" placeholder="Enter DPID (hex)" class="api-input" id="specific-port-desc-dpid">
+                    <input type="text" placeholder="Enter Port Number" class="api-input" id="specific-port-desc-port">
+                    <button class="api-button" id="get-specific-port-desc">Get Specific Port Description</button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Modify Port Behavior Section -->
+        <div class="section-container">
+            <h2 class="section-title">Modify Port Behavior</h2>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>Switch DPID:</label>
+                    <input type="text" placeholder="Enter DPID (hex)" class="api-input w-full" id="modify-port-dpid">
+                </div>
+                <div class="form-group">
+                    <label>Port Number:</label>
+                    <input type="text" placeholder="Enter Port Number" class="api-input w-full" id="modify-port-number">
+                </div>
+                <div class="form-group">
+                    <label>Port Config:</label>
+                    <select class="api-input w-full" id="modify-port-config">
+                        <option value="">Select Config</option>
+                        <option value="PORT_DOWN">PORT_DOWN</option>
+                        <option value="NO_RECV">NO_RECV</option>
+                        <option value="NO_FWD">NO_FWD</option>
+                        <option value="NO_PACKET_IN">NO_PACKET_IN</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Config Mask:</label>
+                    <select class="api-input w-full" id="modify-port-mask">
+                        <option value="">Select Mask</option>
+                        <option value="PORT_DOWN">PORT_DOWN</option>
+                        <option value="NO_RECV">NO_RECV</option>
+                        <option value="NO_FWD">NO_FWD</option>
+                        <option value="NO_PACKET_IN">NO_PACKET_IN</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Hardware Address (optional):</label>
+                    <input type="text" placeholder="e.g., 00:00:00:00:00:01" class="api-input w-full" id="modify-port-hw-addr">
+                </div>
+                <div class="form-group">
+                    <label>Advertise Features (optional):</label>
+                    <input type="text" placeholder="e.g., 0x123" class="api-input w-full" id="modify-port-advertise">
+                </div>
+            </div>
+            <button class="api-button mt-3" id="modify-port-behavior">Modify Port</button>
+        </div>
+    </div>
+    
+    <!-- TOPOLOGY SECTION -->
+    <div id="topology-content" class="tab-content">
+        <!-- Get All Network Information -->
+        <div class="section-container">
+            <h2 class="section-title">Network Topology</h2>
+            <div class="flex flex-wrap gap-2">
+                <button class="api-button" id="get-topo-switches">Get All Switches</button>
+                <button class="api-button" id="get-topo-links">Get All Links</button>
+                <button class="api-button" id="get-topo-hosts">Get All Hosts</button>
+            </div>
+        </div>
+        
+        <!-- Get Specific Switch Topology -->
+        <div class="section-container">
+            <h2 class="section-title">Specific Switch Topology</h2>
+            <div class="form-group">
+                <label>Switch DPID:</label>
+                <input type="text" placeholder="Enter DPID (hex)" class="api-input w-full" id="specific-topo-dpid">
+                <div class="flex flex-wrap gap-2 mt-2">
+                    <button class="api-button" id="get-specific-topo-switch">Get Switch Info</button>
+                    <button class="api-button" id="get-specific-topo-links">Get Switch Links</button>
+                    <button class="api-button" id="get-specific-topo-hosts">Get Switch Hosts</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Response Area -->
+    <div class="section-container">
+        <h2 class="section-title">Response</h2>
+        <div id="api-response">
+            <p>API response will be displayed here...</p>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Wait for document to be fully loaded
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize the response area
+    const responseArea = document.getElementById('api-response');
+    
+    // Tab switching functionality
+    const tabs = document.querySelectorAll('.tab');
+    const tabContents = document.querySelectorAll('.tab-content');
+    
+    tabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+            // Remove active class from all tabs
+            tabs.forEach(t => t.classList.remove('active'));
+            tabContents.forEach(c => c.classList.remove('active'));
+            
+            // Add active class to clicked tab and its content
+            tab.classList.add('active');
+            const tabId = tab.getAttribute('data-tab');
+            document.getElementById(`${tabId}-content`).classList.add('active');
+        });
+    });
+    
+    /**
+     * Common function to make API calls with proper error handling
+     * @param {string} endpoint - API endpoint to call
+     * @param {string} method - HTTP method (GET, POST, PUT, DELETE)
+     * @param {object|null} data - Request body data (for POST/PUT)
+     */
+    async function callApi(endpoint, method = 'GET', data = null) {
+        // Show loading indicator
+        responseArea.textContent = 'Loading...';
+        responseArea.classList.add('loading');
+        
+        try {
+            // Prepare request options
+            const options = {
+                method: method,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                },
+                credentials: 'same-origin' // Important for cookie-based authentication
+            };
+            
+            // Add request body for POST/PUT/DELETE requests
+            if (data && ['POST', 'PUT', 'DELETE'].includes(method)) {
+                options.body = JSON.stringify(data);
+            }
+            
+            // Make the API call
+            const response = await fetch(endpoint, options);
+            
+            // Check if response is OK
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(`API Error (${response.status}): ${errorText}`);
+            }
+            
+            // Parse and display response
+            const responseData = await response.json();
+            responseArea.textContent = JSON.stringify(responseData, null, 2);
+            responseArea.classList.remove('loading');
+            responseArea.classList.remove('error');
+            
+            return responseData;
+        } catch (error) {
+            // Display error message
+            responseArea.textContent = `Error: ${error.message}`;
+            responseArea.classList.remove('loading');
+            responseArea.classList.add('error');
+            console.error(error);
+        }
+    }
+    
+    /**
+     * Helper to get value from an input element
+     * @param {string} id - Element ID
+     * @returns {string} - Element value or empty string if not found
+     */
+    function getValue(id) {
+        const element = document.getElementById(id);
+        return element ? element.value.trim() : '';
+    }
+    
+    // ========== SWITCHES SECTION ==========
+    
+    // Get all switches
+    document.getElementById('get-all-switches').addEventListener('click', function() {
+        callApi('/stats/switches');
+    });
+    
+    // Get switch description
+    document.getElementById('get-switch-desc').addEventListener('click', function() {
+        const dpid = getValue('switch-desc-dpid');
+        if (!dpid) {
+            responseArea.textContent = 'Error: Please enter a Switch DPID';
+            responseArea.classList.add('error');
+            return;
+        }
+        callApi(`/stats/desc/${dpid}`);
+    });
+    
+    // ========== PORTS SECTION ==========
+    
+    // Get all port stats
+    document.getElementById('get-port-stats').addEventListener('click', function() {
+        const dpid = getValue('port-stats-dpid');
+        if (!dpid) {
+            responseArea.textContent = 'Error: Please enter a Switch DPID';
+            responseArea.classList.add('error');
+            return;
+        }
+        callApi(`/stats/port/${dpid}`);
+    });
+    
+    // Get specific port stats
+    document.getElementById('get-specific-port-stats').addEventListener('click', function() {
+        const dpid = getValue('specific-port-stats-dpid');
+        const port = getValue('specific-port-stats-port');
+        if (!dpid || !port) {
+            responseArea.textContent = 'Error: Please enter both Switch DPID and Port Number';
+            responseArea.classList.add('error');
+            return;
+        }
+        callApi(`/stats/port/${dpid}/${port}`);
+    });
+    
+    // Get all port descriptions
+    document.getElementById('get-port-desc').addEventListener('click', function() {
+        const dpid = getValue('port-desc-dpid');
+        if (!dpid) {
+            responseArea.textContent = 'Error: Please enter a Switch DPID';
+            responseArea.classList.add('error');
+            return;
+        }
+        callApi(`/stats/portdesc/${dpid}`);
+    });
+    
+    // Get specific port description
+    document.getElementById('get-specific-port-desc').addEventListener('click', function() {
+        const dpid = getValue('specific-port-desc-dpid');
+        const port = getValue('specific-port-desc-port');
+        if (!dpid || !port) {
+            responseArea.textContent = 'Error: Please enter both Switch DPID and Port Number';
+            responseArea.classList.add('error');
+            return;
+        }
+        callApi(`/stats/portdesc/${dpid}/${port}`);
+    });
+    
+    // Modify port behavior
+    document.getElementById('modify-port-behavior').addEventListener('click', function() {
+        const dpid = getValue('modify-port-dpid');
+        const portNo = getValue('modify-port-number');
+        const config = getValue('modify-port-config');
+        const mask = getValue('modify-port-mask');
+        const hwAddr = getValue('modify-port-hw-addr');
+        const advertise = getValue('modify-port-advertise');
+        
+        if (!dpid || !portNo || !config || !mask) {
+            responseArea.textContent = 'Error: Please enter Switch DPID, Port Number, Config and Mask';
+            responseArea.classList.add('error');
+            return;
+        }
+        
+        const portData = {
+            dpid: dpid,
+            port_no: parseInt(portNo),
+            config: config,
+            mask: mask
+        };
+        
+        if (hwAddr) {
+            portData.hw_addr = hwAddr;
+        }
+        
+        if (advertise) {
+            portData.advertise = parseInt(advertise);
+        }
+        
+        callApi('/stats/portdesc/modify', 'POST', portData);
+    });
+    
+    // ========== TOPOLOGY SECTION ==========
+    
+    // Get all topology switches
+    document.getElementById('get-topo-switches').addEventListener('click', function() {
+        callApi('/stats/topology/switches');
+    });
+    
+    // Get all topology links
+    document.getElementById('get-topo-links').addEventListener('click', function() {
+        callApi('/stats/topology/links');
+    });
+    
+    // Get all topology hosts
+    document.getElementById('get-topo-hosts').addEventListener('click', function() {
+        callApi('/stats/topology/hosts');
+    });
+    
+    // Get specific topology switch
+    document.getElementById('get-specific-topo-switch').addEventListener('click', function() {
+        const dpid = getValue('specific-topo-dpid');
+        if (!dpid) {
+            responseArea.textContent = 'Error: Please enter a Switch DPID';
+            responseArea.classList.add('error');
+            return;
+        }
+        callApi(`/stats/topology/switches/${dpid}`);
+    });
+    
+    // Get specific topology links
+    document.getElementById('get-specific-topo-links').addEventListener('click', function() {
+        const dpid = getValue('specific-topo-dpid');
+        if (!dpid) {
+            responseArea.textContent = 'Error: Please enter a Switch DPID';
+            responseArea.classList.add('error');
+            return;
+        }
+        callApi(`/stats/topology/links/${dpid}`);
+    });
+    
+    // Get specific topology hosts
+    document.getElementById('get-specific-topo-hosts').addEventListener('click', function() {
+        const dpid = getValue('specific-topo-dpid');
+        if (!dpid) {
+            responseArea.textContent = 'Error: Please enter a Switch DPID';
+            responseArea.classList.add('error');
+            return;
+        }
+        callApi(`/stats/topology/hosts/${dpid}`);
+    });
+});
+</script>
 {% endblock %}

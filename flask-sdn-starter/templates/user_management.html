@@ -1,8 +1,251 @@
 {% extends "base.html" %}
 
 {% block title %}User Management{% endblock %}
-{% block page_title %}Manage Users{% endblock %}
 
 {% block content %}
-    <p>User management tools will be here.</p>
+<div class="mb-6">
+    <h1 class="text-2xl font-bold mb-2">User Management</h1>
+    <p class="text-gray-400">Manage user roles and permissions</p>
+</div>
+
+<!-- User Table -->
+<div class="bg-gray-800 rounded-lg shadow-lg overflow-hidden">
+    <div class="p-4 border-b border-gray-700 bg-gray-900 flex justify-between items-center">
+        <h2 class="text-lg font-semibold">System Users</h2>
+        <div class="text-sm text-gray-400">
+            <span class="inline-block px-2 py-1 rounded bg-blue-900 text-blue-300 mr-2">Admin</span>
+            <span class="inline-block px-2 py-1 rounded bg-green-900 text-green-300 mr-2">Operator</span>
+            <span class="inline-block px-2 py-1 rounded bg-purple-900 text-purple-300">Viewer</span>
+        </div>
+    </div>
+    
+    <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-700" id="users-table">
+            <thead class="bg-gray-800">
+                <tr>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                        Username
+                    </th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                        Current Role
+                    </th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                        Actions
+                    </th>
+                </tr>
+            </thead>
+            <tbody class="bg-gray-800 divide-y divide-gray-700" id="users-list">
+                <!-- User rows will be populated by JavaScript -->
+                <tr>
+                    <td colspan="3" class="px-6 py-4 text-center text-gray-400">
+                        Loading users...
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Status message -->
+<div id="status-message" class="mt-4 p-4 rounded-lg hidden">
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Fetch all users when the page loads
+    fetchUsers();
+    
+    // Function to fetch all users
+    function fetchUsers() {
+        fetch('/auth/users', {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${getCookie('access_token')}`
+            }
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Failed to fetch users');
+            }
+            return response.json();
+        })
+        .then(users => {
+            displayUsers(users);
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showStatusMessage('Failed to load users. Please try again.', 'error');
+        });
+    }
+    
+    // Function to display users in the table
+    function displayUsers(users) {
+        const usersList = document.getElementById('users-list');
+        usersList.innerHTML = '';
+        
+        if (users.length === 0) {
+            usersList.innerHTML = `
+                <tr>
+                    <td colspan="3" class="px-6 py-4 text-center text-gray-400">
+                        No users found.
+                    </td>
+                </tr>
+            `;
+            return;
+        }
+        
+        users.forEach(user => {
+            const roleClass = getRoleClass(user.role);
+            const tr = document.createElement('tr');
+            tr.className = 'hover:bg-gray-700';
+            
+            tr.innerHTML = `
+                <td class="px-6 py-4 whitespace-nowrap">
+                    <div class="flex items-center">
+                        <div class="h-8 w-8 rounded-full bg-gray-600 flex items-center justify-center mr-3">
+                            <span class="text-sm font-medium">${user.username[0].toUpperCase()}</span>
+                        </div>
+                        <div class="text-sm font-medium text-white">
+                            ${user.username}
+                        </div>
+                    </div>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                    <span class="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${roleClass}">
+                        ${user.role}
+                    </span>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                    <div class="flex space-x-2">
+                        ${getUpgradeButton(user)}
+                        ${getDowngradeButton(user)}
+                    </div>
+                </td>
+            `;
+            
+            usersList.appendChild(tr);
+        });
+        
+        // Add event listeners to role change buttons
+        document.querySelectorAll('.role-change-btn').forEach(button => {
+            button.addEventListener('click', handleRoleChange);
+        });
+    }
+    
+    // Function to get role-specific CSS classes
+    function getRoleClass(role) {
+        switch(role) {
+            case 'admin':
+                return 'bg-blue-900 text-blue-300';
+            case 'operator':
+                return 'bg-green-900 text-green-300';
+            case 'viewer':
+            default:
+                return 'bg-purple-900 text-purple-300';
+        }
+    }
+    
+            // Function to get the upgrade button HTML based on user role
+    function getUpgradeButton(user) {
+        if (user.role === 'admin') {
+            return ''; // Admin is the highest role, no upgrade
+        }
+        
+        const newRole = user.role === 'viewer' ? 'operator' : 'admin';
+        return `
+            <button 
+                class="role-change-btn bg-indigo-600 hover:bg-indigo-700 text-white py-1 px-3 rounded text-xs"
+                data-user-id="${user.id}"
+                data-new-role="${newRole}"
+                title="Upgrade to ${newRole}">
+                Upgrade
+            </button>
+        `;
+    }
+    
+    // Function to get the downgrade button HTML based on user role
+    function getDowngradeButton(user) {
+        if (user.role === 'viewer' || user.role === 'admin') {
+            return ''; // Viewer is the lowest role, admin can't be downgraded
+        }
+        
+        const newRole = 'viewer'; // Operator can only be downgraded to viewer
+        return `
+            <button 
+                class="role-change-btn bg-indigo-600 hover:bg-indigo-700 text-white py-1 px-3 rounded text-xs"
+                data-user-id="${user.id}"
+                data-new-role="${newRole}"
+                title="Downgrade to ${newRole}">
+                Downgrade
+            </button>
+        `;
+    }
+    
+    // Function to handle role change button clicks
+    function handleRoleChange(event) {
+        const button = event.currentTarget;
+        const userId = button.getAttribute('data-user-id');
+        const newRole = button.getAttribute('data-new-role');
+        
+        // Confirm the role change
+        if (confirm(`Are you sure you want to change this user's role to ${newRole}?`)) {
+            updateUserRole(userId, newRole);
+        }
+    }
+    
+    // Function to update user role
+    function updateUserRole(userId, role) {
+        fetch(`/auth/users/${userId}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${getCookie('access_token')}`
+            },
+            body: JSON.stringify({ role: role })
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Failed to update user role');
+            }
+            return response.json();
+        })
+        .then(data => {
+            showStatusMessage(data.message, 'success');
+            fetchUsers(); // Reload user list
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showStatusMessage('Failed to update user role. Please try again.', 'error');
+        });
+    }
+    
+    // Function to show status messages
+    function showStatusMessage(message, type) {
+        const statusElement = document.getElementById('status-message');
+        statusElement.innerHTML = message;
+        statusElement.classList.remove('hidden', 'bg-green-800', 'bg-red-800');
+        
+        if (type === 'success') {
+            statusElement.classList.add('bg-green-800', 'text-green-200');
+        } else {
+            statusElement.classList.add('bg-red-800', 'text-red-200');
+        }
+        
+        // Auto-hide after 5 seconds
+        setTimeout(() => {
+            statusElement.classList.add('hidden');
+        }, 5000);
+    }
+    
+    // Helper function to get cookie value
+    function getCookie(name) {
+        const value = `; ${document.cookie}`;
+        const parts = value.split(`; ${name}=`);
+        if (parts.length === 2) return parts.pop().split(';').shift();
+    }
+});
+</script>
 {% endblock %}

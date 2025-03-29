@@ -4,7 +4,23 @@
 
 {% block styles %}
 <style>
-    /* Specific styles for API UI */
+    /* Main containers */
+    .section-container {
+        background-color: #1e2232;
+        padding: 1.5rem;
+        border-radius: 0.5rem;
+        margin-bottom: 1.5rem;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+    
+    .section-title {
+        color: #60a5fa;
+        margin-bottom: 1rem;
+        font-size: 1.25rem;
+        font-weight: 600;
+    }
+    
+    /* Buttons and inputs */
     .api-button {
         background-color: #4f46e5;
         color: white;
@@ -14,10 +30,15 @@
         margin: 0.25rem;
         font-size: 0.875rem;
         cursor: pointer;
+        transition: background-color 0.2s;
     }
     
     .api-button:hover {
         background-color: #4338ca;
+    }
+    
+    .api-button:active {
+        background-color: #3730a3;
     }
     
     .api-input {
@@ -27,6 +48,55 @@
         background-color: #374151;
         color: white;
         margin: 0.25rem;
+    }
+    
+    /* Response area */
+    #api-response {
+        background-color: #111827;
+        color: #d1d5db;
+        padding: 1rem;
+        border-radius: 0.375rem;
+        font-family: monospace;
+        font-size: 0.875rem;
+        white-space: pre-wrap;
+        min-height: 200px;
+        max-height: 500px;
+        overflow-y: auto;
+    }
+    
+    #api-response.error {
+        color: #f87171;
+    }
+    
+    #api-response.loading {
+        color: #60a5fa;
+    }
+    
+    /* Grid layout for form inputs */
+    .form-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: 1rem;
+    }
+    
+    /* Form field groups */
+    .form-group {
+        display: flex;
+        flex-direction: column;
+        margin-bottom: 0.75rem;
+    }
+    
+    .form-group label {
+        font-size: 0.875rem;
+        color: #9ca3af;
+        margin-bottom: 0.25rem;
+    }
+    
+    /* Textarea styling */
+    textarea.api-input {
+        min-height: 100px;
+        font-family: monospace;
+        resize: vertical;
     }
 </style>
 {% endblock %}
@@ -41,6 +111,12 @@
     <!-- Switch Information Section -->
     <div class="section-container">
         <h2 class="section-title">Switch Information</h2>
+        <div class="flex flex-wrap gap-2 mb-4">
+            <button class="api-button" id="get-switches">List All Switches</button>
+            <button class="api-button" id="get-topology">Get Network Topology</button>
+            <button class="api-button" id="get-links">Get Network Links</button>
+            <button class="api-button" id="get-hosts">Get Network Hosts</button>
+        </div>
         <div class="flex flex-wrap gap-2 mb-4">
             <input type="text" placeholder="Enter Switch DPID" class="api-input" id="switch-dpid">
             <button class="api-button" id="switch-desc">Switch Description</button>
@@ -73,89 +149,6 @@
         </div>
     </div>
 
-    <!-- Queue Stats Section -->
-    <div class="section-container">
-        <h2 class="section-title">Queue Stats and Descriptions</h2>
-        <div class="flex flex-wrap gap-2 mb-4">
-            <input type="text" placeholder="Enter Port Number" class="api-input" id="queue-port-number">
-            <input type="text" placeholder="Enter Queue ID" class="api-input" id="queue-id">
-            <button class="api-button" id="queue-stats-port">Queue Stats per Port</button>
-            <button class="api-button" id="specific-queue-stats">Specific Queue Stats</button>
-            <button class="api-button" id="queue-config-port">Queue Config per Port</button>
-            <button class="api-button" id="queue-desc-port">Queue Description per Port</button>
-            <button class="api-button" id="specific-queue-desc">Specific Queue Description</button>
-        </div>
-    </div>
-
-    <!-- Specific Meter Details Section -->
-    <div class="section-container">
-        <h2 class="section-title">Specific Meter Details</h2>
-        <div class="flex flex-wrap gap-2 mb-4">
-            <input type="text" placeholder="Enter Meter ID" class="api-input" id="meter-id">
-            <button class="api-button" id="specific-meter-config">Specific Meter Config</button>
-            <button class="api-button" id="specific-meter-desc">Specific Meter Description</button>
-            <button class="api-button" id="specific-meter-stats">Specific Meter Stats</button>
-        </div>
-    </div>
-
-    <!-- Specific Group Details Section -->
-    <div class="section-container">
-        <h2 class="section-title">Specific Group Details</h2>
-        <div class="flex flex-wrap gap-2 mb-4">
-            <input type="text" placeholder="Enter Group ID" class="api-input" id="group-id">
-            <button class="api-button" id="specific-group-desc">Specific Group Description</button>
-            <button class="api-button" id="specific-group-stats">Specific Group Stats</button>
-        </div>
-    </div>
-
-    <!-- Firewall Rules Section -->
-    <div class="section-container">
-        <h2 class="section-title">Firewall Rules</h2>
-        <div class="flex flex-wrap gap-2 mb-4">
-            <button class="api-button" id="get-firewall-rules">Get Firewall Rules</button>
-            <button class="api-button" id="add-firewall-rule">Add Firewall Rule</button>
-            <button class="api-button" id="delete-firewall-rule">Delete Firewall Rule</button>
-        </div>
-        
-        <div class="mt-4">
-            <h3 class="text-lg font-medium mb-2">Add Firewall Rule</h3>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <div>
-                    <label class="block text-sm text-gray-400 mb-1">Source IP:</label>
-                    <input type="text" placeholder="e.g., 10.0.0.1/32" class="api-input w-full" id="fw-src-ip">
-                </div>
-                <div>
-                    <label class="block text-sm text-gray-400 mb-1">Destination IP:</label>
-                    <input type="text" placeholder="e.g., 10.0.0.2/32" class="api-input w-full" id="fw-dst-ip">
-                </div>
-                <div>
-                    <label class="block text-sm text-gray-400 mb-1">Protocol:</label>
-                    <select class="api-input w-full" id="fw-protocol">
-                        <option value="TCP">TCP</option>
-                        <option value="UDP">UDP</option>
-                        <option value="ICMP">ICMP</option>
-                    </select>
-                </div>
-                <div>
-                    <label class="block text-sm text-gray-400 mb-1">Action:</label>
-                    <select class="api-input w-full" id="fw-action">
-                        <option value="ALLOW">ALLOW</option>
-                        <option value="DENY">DENY</option>
-                    </select>
-                </div>
-                <div>
-                    <label class="block text-sm text-gray-400 mb-1">Source Port:</label>
-                    <input type="text" placeholder="e.g., 80" class="api-input w-full" id="fw-src-port">
-                </div>
-                <div>
-                    <label class="block text-sm text-gray-400 mb-1">Destination Port:</label>
-                    <input type="text" placeholder="e.g., 443" class="api-input w-full" id="fw-dst-port">
-                </div>
-            </div>
-            <button class="api-button mt-3" id="submit-firewall-rule">Submit Rule</button>
-        </div>
-    </div>
-
     <!-- Flow Management Section -->
     <div class="section-container">
         <h2 class="section-title">Flow Management</h2>
@@ -166,38 +159,38 @@
         </div>
         
         <div class="mt-4">
-            <h3 class="text-lg font-medium mb-2">Add Flow</h3>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <div>
-                    <label class="block text-sm text-gray-400 mb-1">Switch DPID:</label>
-                    <input type="text" placeholder="Enter Switch DPID" class="api-input w-full" id="flow-dpid">
+            <h3 class="text-lg font-medium mb-2 text-blue-300">Flow Configuration</h3>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>Switch DPID:</label>
+                    <input type="text" placeholder="Enter DPID (hex)" class="api-input w-full" id="flow-dpid">
                 </div>
-                <div>
-                    <label class="block text-sm text-gray-400 mb-1">Priority:</label>
+                <div class="form-group">
+                    <label>Priority:</label>
                     <input type="text" placeholder="e.g., 100" class="api-input w-full" id="flow-priority">
                 </div>
-                <div>
-                    <label class="block text-sm text-gray-400 mb-1">In Port:</label>
+                <div class="form-group">
+                    <label>In Port:</label>
                     <input type="text" placeholder="e.g., 1" class="api-input w-full" id="flow-in-port">
                 </div>
-                <div>
-                    <label class="block text-sm text-gray-400 mb-1">Out Port:</label>
+                <div class="form-group">
+                    <label>Out Port:</label>
                     <input type="text" placeholder="e.g., 2" class="api-input w-full" id="flow-out-port">
                 </div>
-                <div>
-                    <label class="block text-sm text-gray-400 mb-1">Source MAC:</label>
+                <div class="form-group">
+                    <label>Source MAC:</label>
                     <input type="text" placeholder="e.g., 00:00:00:00:00:01" class="api-input w-full" id="flow-src-mac">
                 </div>
-                <div>
-                    <label class="block text-sm text-gray-400 mb-1">Destination MAC:</label>
+                <div class="form-group">
+                    <label>Destination MAC:</label>
                     <input type="text" placeholder="e.g., 00:00:00:00:00:02" class="api-input w-full" id="flow-dst-mac">
                 </div>
-                <div>
-                    <label class="block text-sm text-gray-400 mb-1">Source IP:</label>
+                <div class="form-group">
+                    <label>Source IP:</label>
                     <input type="text" placeholder="e.g., 10.0.0.1" class="api-input w-full" id="flow-src-ip">
                 </div>
-                <div>
-                    <label class="block text-sm text-gray-400 mb-1">Destination IP:</label>
+                <div class="form-group">
+                    <label>Destination IP:</label>
                     <input type="text" placeholder="e.g., 10.0.0.2" class="api-input w-full" id="flow-dst-ip">
                 </div>
             </div>
@@ -205,79 +198,71 @@
         </div>
     </div>
 
+    <!-- Firewall Rules Section -->
+    <div class="section-container">
+        <h2 class="section-title">Firewall Management</h2>
+        <div class="flex flex-wrap gap-2 mb-4">
+            <button class="api-button" id="get-firewall-status">Firewall Status</button>
+            <input type="text" placeholder="Enter Switch ID (hex)" class="api-input" id="switchid">
+            <button class="api-button" id="enable-firewall">Enable Firewall</button>
+            <button class="api-button" id="disable-firewall">Disable Firewall</button>
+            <button class="api-button" id="get-firewall-rules">Get Firewall Rules</button>
+        </div>
+        
+        <div class="mt-4">
+            <h3 class="text-lg font-medium mb-2 text-blue-300">Add Firewall Rule</h3>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>Source IP:</label>
+                    <input type="text" placeholder="e.g., 10.0.0.1/32" class="api-input w-full" id="fw-src-ip">
+                </div>
+                <div class="form-group">
+                    <label>Destination IP:</label>
+                    <input type="text" placeholder="e.g., 10.0.0.2/32" class="api-input w-full" id="fw-dst-ip">
+                </div>
+                <div class="form-group">
+                    <label>Protocol:</label>
+                    <select class="api-input w-full" id="fw-protocol">
+                        <option value="TCP">TCP</option>
+                        <option value="UDP">UDP</option>
+                        <option value="ICMP">ICMP</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Action:</label>
+                    <select class="api-input w-full" id="fw-action">
+                        <option value="ALLOW">ALLOW</option>
+                        <option value="DENY">DENY</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Source Port:</label>
+                    <input type="text" placeholder="e.g., 80" class="api-input w-full" id="fw-src-port">
+                </div>
+                <div class="form-group">
+                    <label>Destination Port:</label>
+                    <input type="text" placeholder="e.g., 443" class="api-input w-full" id="fw-dst-port">
+                </div>
+                <div class="form-group">
+                    <label>Rule ID (for delete):</label>
+                    <input type="text" placeholder="e.g., 1" class="api-input w-full" id="rule-id">
+                </div>
+            </div>
+            <button class="api-button mt-3" id="submit-firewall-rule">Add Rule</button>
+            <button class="api-button mt-3" id="delete-firewall-rule">Delete Rule</button>
+        </div>
+    </div>
+
     <!-- Response Area -->
     <div class="section-container">
         <h2 class="section-title">Response</h2>
-        <div id="response" class="bg-gray-700 p-4 rounded-lg min-h-[200px] font-mono text-sm overflow-auto">
-            <p class="text-gray-400">API response will be displayed here...</p>
+        <div id="api-response">
+            <p>API response will be displayed here...</p>
         </div>
     </div>
 </div>
 {% endblock %}
 
 {% block scripts %}
-<script>
-    document.addEventListener('DOMContentLoaded', function() {
-        // Add your JavaScript here to handle button clicks and API calls
-        
-        // Example function to handle API calls
-        function callApi(endpoint, params) {
-            // Display loading message
-            document.getElementById('response').innerHTML = '<p class="text-blue-300">Loading...</p>';
-            
-            // Here you would make your actual API call
-            // This is just a placeholder for demonstration
-            setTimeout(() => {
-                document.getElementById('response').innerHTML = 
-                    `<pre class="text-green-400">API call to ${endpoint} with params: ${JSON.stringify(params, null, 2)}</pre>`;
-            }, 500);
-        }
-        
-        // Example button click handlers
-        document.getElementById('switch-desc').addEventListener('click', function() {
-            const dpid = document.getElementById('switch-dpid').value;
-            if (!dpid) {
-                document.getElementById('response').innerHTML = 
-                    '<p class="text-red-400">Error: Please enter a Switch DPID</p>';
-                return;
-            }
-            callApi('/switch/description', { dpid });
-        });
-        
-        document.getElementById('get-firewall-rules').addEventListener('click', function() {
-            callApi('/firewall/rules', {});
-        });
-        
-        document.getElementById('submit-firewall-rule').addEventListener('click', function() {
-            const rule = {
-                src_ip: document.getElementById('fw-src-ip').value,
-                dst_ip: document.getElementById('fw-dst-ip').value,
-                protocol: document.getElementById('fw-protocol').value,
-                action: document.getElementById('fw-action').value,
-                src_port: document.getElementById('fw-src-port').value,
-                dst_port: document.getElementById('fw-dst-port').value
-            };
-            
-            callApi('/firewall/rules/add', rule);
-        });
-        
-        document.getElementById('submit-flow').addEventListener('click', function() {
-            const flow = {
-                dpid: document.getElementById('flow-dpid').value,
-                priority: document.getElementById('flow-priority').value,
-                in_port: document.getElementById('flow-in-port').value,
-                out_port: document.getElementById('flow-out-port').value,
-                src_mac: document.getElementById('flow-src-mac').value,
-                dst_mac: document.getElementById('flow-dst-mac').value,
-                src_ip: document.getElementById('flow-src-ip').value,
-                dst_ip: document.getElementById('flow-dst-ip').value
-            };
-            
-            callApi('/flows/add', flow);
-        });
-        
-        // Wire up other buttons as needed
-        // For brevity, not all buttons are wired up in this example
-    });
-</script>
+<script src="{{ url_for('static', filename='js/api_ui.js') }}"></script>
 {% endblock %}

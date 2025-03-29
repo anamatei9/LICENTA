@@ -9,7 +9,8 @@ from .models.user import UserModel
 from werkzeug.security import generate_password_hash
 from flask import Flask, render_template, redirect, url_for
 from .resources.role_required import viewer_required, operator_required, admin_required
-
+from flask import g
+from flask_jwt_extended import get_jwt_identity, verify_jwt_in_request
 
 def create_app():
     app = Flask(__name__)
@@ -79,15 +80,23 @@ def create_app():
     app.register_blueprint(firewall_blp)
     app.register_blueprint(openflow_blp)
 
+    @app.before_request
+    def load_user():
+        g.user = None
+        try:
+            if verify_jwt_in_request(optional=True):
+                user_id = get_jwt_identity()
+                if user_id:
+                    g.user = UserModel.query.get(user_id)
+        except:
+            pass  # If there's an error, we just continue with g.user as None
+
     @app.route('/')
     def index():
         return render_template('login.html')
     @app.route('/ui')
     def api_ui():
         return render_template('api_ui.html')
-    @app.route('/login')
-    def login():
-        return render_template('login.html')
 
 
     # ✅ Main Pages

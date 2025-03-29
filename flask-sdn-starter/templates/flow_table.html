@@ -1,8 +1,1161 @@
 {% extends "base.html" %}
 
-{% block title %}Flow Table{% endblock %}
-{% block page_title %}Flow Table Management{% endblock %}
+{% block title %}Flow Table Management{% endblock %}
+
+{% block styles %}
+<style>
+    /* Main containers */
+    .section-container {
+        background-color: #1e2232;
+        padding: 1.5rem;
+        border-radius: 0.5rem;
+        margin-bottom: 1.5rem;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+    
+    .section-title {
+        color: #60a5fa;
+        margin-bottom: 1rem;
+        font-size: 1.25rem;
+        font-weight: 600;
+    }
+    
+    /* Buttons and inputs */
+    .api-button {
+        background-color: #4f46e5;
+        color: white;
+        padding: 0.375rem 0.75rem;
+        border-radius: 0.25rem;
+        border: none;
+        margin: 0.25rem;
+        font-size: 0.875rem;
+        cursor: pointer;
+        transition: background-color 0.2s;
+    }
+    
+    .api-button:hover {
+        background-color: #4338ca;
+    }
+    
+    .api-button:active {
+        background-color: #3730a3;
+    }
+    
+    .api-input {
+        padding: 0.375rem 0.75rem;
+        border-radius: 0.25rem;
+        border: 1px solid #4b5563;
+        background-color: #374151;
+        color: white;
+        margin: 0.25rem;
+    }
+    
+    /* Response area */
+    #api-response {
+        background-color: #111827;
+        color: #d1d5db;
+        padding: 1rem;
+        border-radius: 0.375rem;
+        font-family: monospace;
+        font-size: 0.875rem;
+        white-space: pre-wrap;
+        min-height: 200px;
+        max-height: 500px;
+        overflow-y: auto;
+    }
+    
+    #api-response.error {
+        color: #f87171;
+    }
+    
+    #api-response.loading {
+        color: #60a5fa;
+    }
+    
+    /* Tab styling */
+    .tab-container {
+        display: flex;
+        border-bottom: 1px solid #4b5563;
+        margin-bottom: 1rem;
+    }
+    
+    .tab {
+        padding: 0.5rem 1rem;
+        cursor: pointer;
+        color: #9ca3af;
+        border-bottom: 2px solid transparent;
+    }
+    
+    .tab.active {
+        color: #60a5fa;
+        border-bottom: 2px solid #60a5fa;
+    }
+    
+    .tab-content {
+        display: none;
+    }
+    
+    .tab-content.active {
+        display: block;
+    }
+    
+    /* Collapsible sections */
+    .collapse-header {
+        cursor: pointer;
+        padding: 0.5rem;
+        background-color: #2d3748;
+        border-radius: 0.25rem;
+        margin-bottom: 0.5rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    
+    .collapse-header::after {
+        content: "+";
+        font-size: 1.25rem;
+    }
+    
+    .collapse-header.active::after {
+        content: "-";
+    }
+    
+    .collapse-content {
+        display: none;
+        padding: 0.5rem;
+    }
+    
+    .collapse-content.active {
+        display: block;
+    }
+    
+    /* Instruction note */
+    .instruction-note {
+        background-color: #374151;
+        border-left: 4px solid #60a5fa;
+        padding: 0.75rem;
+        margin-bottom: 1rem;
+        border-radius: 0 0.25rem 0.25rem 0;
+    }
+    
+    /* Form grid layout */
+    .form-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+        gap: 1rem;
+    }
+    
+    /* Form group */
+    .form-group {
+        margin-bottom: 1rem;
+    }
+    
+    .form-group label {
+        display: block;
+        margin-bottom: 0.25rem;
+        color: #9ca3af;
+    }
+</style>
+{% endblock %}
 
 {% block content %}
-    <p>Flow table data will be displayed here.</p>
+<div>
+    <div class="flex items-center mb-6">
+        <img src="{{ url_for('static', filename='images/flow.png') }}" alt="Flow Table Logo" class="mr-3" width="50" height="50">
+        <h1 class="text-3xl font-bold text-blue-400">Flow Table Management</h1>
+    </div>
+
+    <div class="tab-container">
+        <div class="tab active" data-tab="view">View Flows</div>
+        <div class="tab" data-tab="add">Add Flow</div>
+        <div class="tab" data-tab="modify">Modify Flow</div>
+        <div class="tab" data-tab="delete">Delete Flow</div>
+    </div>
+    
+    <!-- VIEW FLOWS SECTION -->
+    <div id="view-content" class="tab-content active">
+        <!-- Flow Stats Section -->
+        <div class="section-container">
+            <h2 class="section-title">View Flow Statistics</h2>
+            
+            <div class="form-group">
+                <label>Switch DPID:</label>
+                <input type="text" placeholder="Enter DPID (hex)" class="api-input w-full" id="flow-stats-dpid">
+                <div class="flex flex-wrap gap-2 mt-2">
+                    <button class="api-button" id="get-flow-stats">Get Flow Stats</button>
+                    <button class="api-button" id="get-flow-desc">Get Flow Description</button>
+                    <button class="api-button" id="get-aggregate-flow">Get Aggregate Flow Stats</button>
+                </div>
+            </div>
+            
+            <div class="form-group mt-4">
+                <label>Filter Flow Stats (Optional):</label>
+                <div class="collapse-header" id="filter-collapse-header">Show Filter Options</div>
+                <div class="collapse-content" id="filter-collapse-content">
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label>Table ID:</label>
+                            <input type="number" placeholder="Table ID" class="api-input w-full" id="filter-table-id">
+                        </div>
+                        <div class="form-group">
+                            <label>Out Port:</label>
+                            <input type="number" placeholder="Out Port" class="api-input w-full" id="filter-out-port">
+                        </div>
+                        <div class="form-group">
+                            <label>Out Group:</label>
+                            <input type="number" placeholder="Out Group" class="api-input w-full" id="filter-out-group">
+                        </div>
+                        <div class="form-group">
+                            <label>Cookie:</label>
+                            <input type="text" placeholder="Cookie (hex)" class="api-input w-full" id="filter-cookie">
+                        </div>
+                        <div class="form-group">
+                            <label>Cookie Mask:</label>
+                            <input type="text" placeholder="Cookie Mask (hex)" class="api-input w-full" id="filter-cookie-mask">
+                        </div>
+                    </div>
+                    <div class="flex flex-wrap gap-2 mt-2">
+                        <button class="api-button" id="filter-flow-stats">Get Filtered Flow Stats</button>
+                        <button class="api-button" id="filter-flow-desc">Get Filtered Flow Description</button>
+                        <button class="api-button" id="filter-aggregate-flow">Get Filtered Aggregate Flow</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Table Stats Section -->
+        <div class="section-container">
+            <h2 class="section-title">View Table Statistics</h2>
+            
+            <div class="form-group">
+                <label>Switch DPID:</label>
+                <input type="text" placeholder="Enter DPID (hex)" class="api-input w-full" id="table-stats-dpid">
+                <div class="flex flex-wrap gap-2 mt-2">
+                    <button class="api-button" id="get-table-stats">Get Table Stats</button>
+                    <button class="api-button" id="get-table-features">Get Table Features</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- ADD FLOW SECTION -->
+    <div id="add-content" class="tab-content">
+        <div class="section-container">
+            <h2 class="section-title">Add Flow Entry</h2>
+            
+            <div class="instruction-note">
+                <p>Add a flow entry to a switch. Required fields: dpid, match criteria, and at least one instruction or action.</p>
+            </div>
+            
+            <!-- Basic Fields -->
+            <div class="form-group">
+                <label>Switch DPID:</label>
+                <input type="text" placeholder="Enter DPID (hex)" class="api-input w-full" id="add-flow-dpid" required>
+            </div>
+            
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>Table ID:</label>
+                    <input type="number" placeholder="Table ID (optional)" min="0" class="api-input w-full" id="add-flow-table-id">
+                </div>
+                
+                <div class="form-group">
+                    <label>Priority:</label>
+                    <input type="number" placeholder="Priority (optional)" min="0" max="65535" class="api-input w-full" id="add-flow-priority">
+                </div>
+                
+                <div class="form-group">
+                    <label>Cookie (hex):</label>
+                    <input type="text" placeholder="Cookie value (optional)" class="api-input w-full" id="add-flow-cookie">
+                </div>
+            </div>
+            
+            <!-- Match Fields Section -->
+            <div class="form-group mt-4">
+                <label>Match Fields:</label>
+                <div class="collapse-header" id="match-collapse-header">Show Match Fields</div>
+                <div class="collapse-content" id="match-collapse-content">
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label>In Port:</label>
+                            <input type="number" placeholder="In Port" class="api-input w-full" id="add-flow-in-port">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>Source MAC:</label>
+                            <input type="text" placeholder="xx:xx:xx:xx:xx:xx" class="api-input w-full" id="add-flow-dl-src">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>Destination MAC:</label>
+                            <input type="text" placeholder="xx:xx:xx:xx:xx:xx" class="api-input w-full" id="add-flow-dl-dst">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>Ethernet Type:</label>
+                            <input type="text" placeholder="Ethertype (hex, e.g. 0x0800)" class="api-input w-full" id="add-flow-dl-type">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>VLAN ID:</label>
+                            <input type="number" placeholder="VLAN ID" min="0" max="4095" class="api-input w-full" id="add-flow-vlan-vid">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>IP Protocol:</label>
+                            <input type="number" placeholder="IP Protocol" min="0" max="255" class="api-input w-full" id="add-flow-ip-proto">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>IPv4 Source:</label>
+                            <input type="text" placeholder="e.g. 192.168.1.0/24" class="api-input w-full" id="add-flow-ipv4-src">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>IPv4 Destination:</label>
+                            <input type="text" placeholder="e.g. 10.0.0.1/32" class="api-input w-full" id="add-flow-ipv4-dst">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>TCP Source Port:</label>
+                            <input type="number" placeholder="TCP Source Port" min="0" max="65535" class="api-input w-full" id="add-flow-tcp-src">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>TCP Destination Port:</label>
+                            <input type="number" placeholder="TCP Destination Port" min="0" max="65535" class="api-input w-full" id="add-flow-tcp-dst">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>UDP Source Port:</label>
+                            <input type="number" placeholder="UDP Source Port" min="0" max="65535" class="api-input w-full" id="add-flow-udp-src">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>UDP Destination Port:</label>
+                            <input type="number" placeholder="UDP Destination Port" min="0" max="65535" class="api-input w-full" id="add-flow-udp-dst">
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Actions Section -->
+            <div class="form-group mt-4">
+                <label>Actions:</label>
+                <div class="collapse-header" id="actions-collapse-header">Show Actions</div>
+                <div class="collapse-content" id="actions-collapse-content">
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label>Output Port:</label>
+                            <input type="text" placeholder="Port number or special port" class="api-input w-full" id="add-flow-output">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>Group:</label>
+                            <input type="number" placeholder="Group ID" min="0" class="api-input w-full" id="add-flow-group">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>Set Field VLAN ID:</label>
+                            <input type="number" placeholder="VLAN ID" min="0" max="4095" class="api-input w-full" id="add-flow-set-field-vlan-vid">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>Set Field Source MAC:</label>
+                            <input type="text" placeholder="xx:xx:xx:xx:xx:xx" class="api-input w-full" id="add-flow-set-field-eth-src">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>Set Field Destination MAC:</label>
+                            <input type="text" placeholder="xx:xx:xx:xx:xx:xx" class="api-input w-full" id="add-flow-set-field-eth-dst">
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Additional Options -->
+            <div class="form-group mt-4">
+                <label>Additional Options:</label>
+                <div class="collapse-header" id="options-collapse-header">Show Additional Options</div>
+                <div class="collapse-content" id="options-collapse-content">
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label>Hard Timeout:</label>
+                            <input type="number" placeholder="Hard timeout (seconds)" min="0" class="api-input w-full" id="add-flow-hard-timeout">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>Idle Timeout:</label>
+                            <input type="number" placeholder="Idle timeout (seconds)" min="0" class="api-input w-full" id="add-flow-idle-timeout">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>Buffer ID:</label>
+                            <input type="number" placeholder="Buffer ID" class="api-input w-full" id="add-flow-buffer-id">
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <button class="api-button mt-4" id="add-flow-entry">Add Flow Entry</button>
+        </div>
+    </div>
+    
+    <!-- MODIFY FLOW SECTION -->
+    <div id="modify-content" class="tab-content">
+        <div class="section-container">
+            <h2 class="section-title">Modify Flow Entries</h2>
+            
+            <div class="instruction-note">
+                <p>There are two ways to modify flows:</p>
+                <ul class="ml-4 list-disc">
+                    <li>Modify all matching flow entries</li>
+                    <li>Modify flow entry strictly matching wildcards and priority</li>
+                </ul>
+            </div>
+            
+            <div class="form-group">
+                <label>Modification Type:</label>
+                <select class="api-input w-full" id="modify-flow-type">
+                    <option value="modify">Modify all matching flow entries</option>
+                    <option value="modify_strict">Modify flow entry strictly</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label>Switch DPID:</label>
+                <input type="text" placeholder="Enter DPID (hex)" class="api-input w-full" id="modify-flow-dpid" required>
+            </div>
+            
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>Table ID:</label>
+                    <input type="number" placeholder="Table ID" min="0" class="api-input w-full" id="modify-flow-table-id">
+                </div>
+                
+                <div class="form-group">
+                    <label>Priority:</label>
+                    <input type="number" placeholder="Priority" min="0" max="65535" class="api-input w-full" id="modify-flow-priority">
+                </div>
+                
+                <div class="form-group">
+                    <label>Cookie (hex):</label>
+                    <input type="text" placeholder="Cookie value (hex)" class="api-input w-full" id="modify-flow-cookie">
+                </div>
+                
+                <div class="form-group">
+                    <label>Cookie Mask (hex):</label>
+                    <input type="text" placeholder="Cookie mask (hex)" class="api-input w-full" id="modify-flow-cookie-mask">
+                </div>
+            </div>
+            
+            <!-- Match Fields Section -->
+            <div class="form-group mt-4">
+                <label>Match Fields:</label>
+                <div class="collapse-header" id="modify-match-collapse-header">Show Match Fields</div>
+                <div class="collapse-content" id="modify-match-collapse-content">
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label>In Port:</label>
+                            <input type="number" placeholder="In Port" class="api-input w-full" id="modify-flow-in-port">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>Source MAC:</label>
+                            <input type="text" placeholder="xx:xx:xx:xx:xx:xx" class="api-input w-full" id="modify-flow-dl-src">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>Destination MAC:</label>
+                            <input type="text" placeholder="xx:xx:xx:xx:xx:xx" class="api-input w-full" id="modify-flow-dl-dst">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>Ethernet Type:</label>
+                            <input type="text" placeholder="Ethertype (hex, e.g. 0x0800)" class="api-input w-full" id="modify-flow-dl-type">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>VLAN ID:</label>
+                            <input type="number" placeholder="VLAN ID" min="0" max="4095" class="api-input w-full" id="modify-flow-vlan-vid">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>IP Protocol:</label>
+                            <input type="number" placeholder="IP Protocol" min="0" max="255" class="api-input w-full" id="modify-flow-ip-proto">
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Actions Section -->
+            <div class="form-group mt-4">
+                <label>New Actions:</label>
+                <div class="collapse-header" id="modify-actions-collapse-header">Show Actions</div>
+                <div class="collapse-content" id="modify-actions-collapse-content">
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label>Output Port:</label>
+                            <input type="text" placeholder="Port number or special port" class="api-input w-full" id="modify-flow-output">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>Group:</label>
+                            <input type="number" placeholder="Group ID" min="0" class="api-input w-full" id="modify-flow-group">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>Set Field VLAN ID:</label>
+                            <input type="number" placeholder="VLAN ID" min="0" max="4095" class="api-input w-full" id="modify-flow-set-field-vlan-vid">
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <button class="api-button mt-4" id="modify-flow-entry">Modify Flow Entry</button>
+        </div>
+    </div>
+    
+    <!-- DELETE FLOW SECTION -->
+    <div id="delete-content" class="tab-content">
+        <div class="section-container">
+            <h2 class="section-title">Delete Flow Entries</h2>
+            
+            <div class="instruction-note">
+                <p>There are three ways to delete flows:</p>
+                <ul class="ml-4 list-disc">
+                    <li>Delete all matching flow entries</li>
+                    <li>Delete flow entry strictly matching wildcards and priority</li>
+                    <li>Delete all flow entries of a switch</li>
+                </ul>
+            </div>
+            
+            <div class="form-group">
+                <label>Deletion Type:</label>
+                <select class="api-input w-full" id="delete-flow-type">
+                    <option value="delete">Delete all matching flow entries</option>
+                    <option value="delete_strict">Delete flow entry strictly</option>
+                    <option value="clear">Delete all flow entries of switch</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label>Switch DPID:</label>
+                <input type="text" placeholder="Enter DPID (hex)" class="api-input w-full" id="delete-flow-dpid" required>
+            </div>
+            
+            <div id="delete-flow-specific-fields" style="display: none;">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Table ID:</label>
+                        <input type="number" placeholder="Table ID" min="0" class="api-input w-full" id="delete-flow-table-id">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Priority:</label>
+                        <input type="number" placeholder="Priority" min="0" max="65535" class="api-input w-full" id="delete-flow-priority">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>In Port:</label>
+                        <input type="number" placeholder="In Port" class="api-input w-full" id="delete-flow-in-port">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Source MAC:</label>
+                        <input type="text" placeholder="xx:xx:xx:xx:xx:xx" class="api-input w-full" id="delete-flow-dl-src">
+                    </div>
+                </div>
+            </div>
+            
+            <button class="api-button mt-4" id="delete-flow-entry">Delete Flow Entry</button>
+        </div>
+    </div>
+    
+    <!-- Response Area -->
+    <div class="section-container">
+        <h2 class="section-title">Response</h2>
+        <div id="api-response">
+            <p>API response will be displayed here...</p>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize the response area
+    const responseArea = document.getElementById('api-response');
+    
+    // Tab switching functionality
+    const tabs = document.querySelectorAll('.tab');
+    const tabContents = document.querySelectorAll('.tab-content');
+    
+    tabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+            // Remove active class from all tabs
+            tabs.forEach(t => t.classList.remove('active'));
+            tabContents.forEach(c => c.classList.remove('active'));
+            
+            // Add active class to clicked tab and its content
+            tab.classList.add('active');
+            const tabId = tab.getAttribute('data-tab');
+            document.getElementById(`${tabId}-content`).classList.add('active');
+        });
+    });
+    
+    // Collapsible sections
+    const headers = document.querySelectorAll('.collapse-header');
+    
+    headers.forEach(header => {
+        header.addEventListener('click', () => {
+            header.classList.toggle('active');
+            const content = header.nextElementSibling;
+            if (content && content.classList.contains('collapse-content')) {
+                content.classList.toggle('active');
+            }
+        });
+    });
+    
+    // Delete flow type change handler
+    const deleteFlowType = document.getElementById('delete-flow-type');
+    const deleteFlowSpecificFields = document.getElementById('delete-flow-specific-fields');
+    
+    if (deleteFlowType && deleteFlowSpecificFields) {
+        deleteFlowType.addEventListener('change', function() {
+            if (this.value === 'clear') {
+                deleteFlowSpecificFields.style.display = 'none';
+            } else {
+                deleteFlowSpecificFields.style.display = 'block';
+            }
+        });
+    }
+    
+    // ========== VIEW FLOWS SECTION ==========
+    
+    // Get flow stats
+    document.getElementById('get-flow-stats').addEventListener('click', function() {
+        const dpid = getValue('flow-stats-dpid');
+        if (!dpid) {
+            showError('Please enter a Switch DPID');
+            return;
+        }
+        callApi(`/stats/flow/${dpid}`);
+    });
+    
+    // Get flow description
+    document.getElementById('get-flow-desc').addEventListener('click', function() {
+        const dpid = getValue('flow-stats-dpid');
+        if (!dpid) {
+            showError('Please enter a Switch DPID');
+            return;
+        }
+        callApi(`/stats/flowdesc/${dpid}`);
+    });
+    
+    // Get aggregate flow stats
+    document.getElementById('get-aggregate-flow').addEventListener('click', function() {
+        const dpid = getValue('flow-stats-dpid');
+        if (!dpid) {
+            showError('Please enter a Switch DPID');
+            return;
+        }
+        callApi(`/stats/aggregateflow/${dpid}`);
+    });
+    
+    // Get table stats
+    document.getElementById('get-table-stats').addEventListener('click', function() {
+        const dpid = getValue('table-stats-dpid');
+        if (!dpid) {
+            showError('Please enter a Switch DPID');
+            return;
+        }
+        callApi(`/stats/table/${dpid}`);
+    });
+    
+    // Get table features
+    document.getElementById('get-table-features').addEventListener('click', function() {
+        const dpid = getValue('table-stats-dpid');
+        if (!dpid) {
+            showError('Please enter a Switch DPID');
+            return;
+        }
+        callApi(`/stats/tablefeatures/${dpid}`);
+    });
+    
+    // Get filtered flow stats
+    document.getElementById('filter-flow-stats').addEventListener('click', function() {
+        const dpid = getValue('flow-stats-dpid');
+        if (!dpid) {
+            showError('Please enter a Switch DPID');
+            return;
+        }
+        
+        const filterData = buildFilterData();
+        callApi(`/stats/flow/${dpid}`, 'POST', filterData);
+    });
+    
+    // Get filtered flow description
+    document.getElementById('filter-flow-desc').addEventListener('click', function() {
+        const dpid = getValue('flow-stats-dpid');
+        if (!dpid) {
+            showError('Please enter a Switch DPID');
+            return;
+        }
+        
+        const filterData = buildFilterData();
+        callApi(`/stats/flowdesc/${dpid}`, 'POST', filterData);
+    });
+    
+    // Get filtered aggregate flow
+    document.getElementById('filter-aggregate-flow').addEventListener('click', function() {
+        const dpid = getValue('flow-stats-dpid');
+        if (!dpid) {
+            showError('Please enter a Switch DPID');
+            return;
+        }
+        
+        const filterData = buildFilterData();
+        callApi(`/stats/aggregateflow/${dpid}`, 'POST', filterData);
+    });
+    
+    // ========== ADD FLOW SECTION ==========
+    
+    // Add flow entry
+    document.getElementById('add-flow-entry').addEventListener('click', function() {
+        const dpid = getValue('add-flow-dpid');
+        if (!dpid) {
+            showError('Please enter a Switch DPID');
+            return;
+        }
+        
+        // Build flow entry data
+        const flowData = {};
+        
+        // Add basic fields
+        const tableId = getValue('add-flow-table-id');
+        if (tableId) flowData.table_id = parseInt(tableId);
+        
+        const priority = getValue('add-flow-priority');
+        if (priority) flowData.priority = parseInt(priority);
+        
+        const cookie = getValue('add-flow-cookie');
+        if (cookie) flowData.cookie = cookie;
+        
+        const hardTimeout = getValue('add-flow-hard-timeout');
+        if (hardTimeout) flowData.hard_timeout = parseInt(hardTimeout);
+        
+        const idleTimeout = getValue('add-flow-idle-timeout');
+        if (idleTimeout) flowData.idle_timeout = parseInt(idleTimeout);
+        
+        const bufferId = getValue('add-flow-buffer-id');
+        if (bufferId) flowData.buffer_id = parseInt(bufferId);
+        
+        // Add match fields
+        const match = {};
+        let hasMatchFields = false;
+        
+        const inPort = getValue('add-flow-in-port');
+        if (inPort) {
+            match.in_port = parseInt(inPort);
+            hasMatchFields = true;
+        }
+        
+        const dlSrc = getValue('add-flow-dl-src');
+        if (dlSrc) {
+            match.dl_src = dlSrc;
+            hasMatchFields = true;
+        }
+        
+        const dlDst = getValue('add-flow-dl-dst');
+        if (dlDst) {
+            match.dl_dst = dlDst;
+            hasMatchFields = true;
+        }
+        
+        const dlType = getValue('add-flow-dl-type');
+        if (dlType) {
+            match.dl_type = dlType;
+            hasMatchFields = true;
+        }
+        
+        const vlanVid = getValue('add-flow-vlan-vid');
+        if (vlanVid) {
+            match.vlan_vid = parseInt(vlanVid);
+            hasMatchFields = true;
+        }
+        
+        const ipProto = getValue('add-flow-ip-proto');
+        if (ipProto) {
+            match.ip_proto = parseInt(ipProto);
+            hasMatchFields = true;
+        }
+        
+        const ipv4Src = getValue('add-flow-ipv4-src');
+        if (ipv4Src) {
+            match.ipv4_src = ipv4Src;
+            hasMatchFields = true;
+        }
+        
+        const ipv4Dst = getValue('add-flow-ipv4-dst');
+        if (ipv4Dst) {
+            match.ipv4_dst = ipv4Dst;
+            hasMatchFields = true;
+        }
+        
+        const tcpSrc = getValue('add-flow-tcp-src');
+        if (tcpSrc) {
+            match.tcp_src = parseInt(tcpSrc);
+            hasMatchFields = true;
+        }
+        
+        const tcpDst = getValue('add-flow-tcp-dst');
+        if (tcpDst) {
+            match.tcp_dst = parseInt(tcpDst);
+            hasMatchFields = true;
+        }
+        
+        const udpSrc = getValue('add-flow-udp-src');
+        if (udpSrc) {
+            match.udp_src = parseInt(udpSrc);
+            hasMatchFields = true;
+        }
+        
+        const udpDst = getValue('add-flow-udp-dst');
+        if (udpDst) {
+            match.udp_dst = parseInt(udpDst);
+            hasMatchFields = true;
+        }
+        
+        // Only add match if there are fields
+        if (hasMatchFields) {
+            flowData.match = match;
+        }
+        
+        // Add actions
+        const actions = [];
+        let hasActions = false;
+        
+        const outputPort = getValue('add-flow-output');
+        if (outputPort) {
+            actions.push({
+                type: 'OUTPUT',
+                port: outputPort
+            });
+            hasActions = true;
+        }
+        
+        const groupId = getValue('add-flow-group');
+        if (groupId) {
+            actions.push({
+                type: 'GROUP',
+                group_id: parseInt(groupId)
+            });
+            hasActions = true;
+        }
+        
+        const setVlanVid = getValue('add-flow-set-field-vlan-vid');
+        if (setVlanVid) {
+            actions.push({
+                type: 'SET_FIELD',
+                field: 'vlan_vid',
+                value: parseInt(setVlanVid)
+            });
+            hasActions = true;
+        }
+        
+        const setEthSrc = getValue('add-flow-set-field-eth-src');
+        if (setEthSrc) {
+            actions.push({
+                type: 'SET_FIELD',
+                field: 'eth_src',
+                value: setEthSrc
+            });
+            hasActions = true;
+        }
+        
+        const setEthDst = getValue('add-flow-set-field-eth-dst');
+        if (setEthDst) {
+            actions.push({
+                type: 'SET_FIELD',
+                field: 'eth_dst',
+                value: setEthDst
+            });
+            hasActions = true;
+        }
+        
+        // Only add actions if there are any
+        if (hasActions) {
+            flowData.actions = actions;
+        }
+        
+        // Check for required fields
+        if (!hasMatchFields && !hasActions) {
+            showError('Please specify at least one match field and one action');
+            return;
+        }
+        
+        callApi('/stats/flowentry/add', 'POST', flowData);
+    });
+    
+    // ========== MODIFY FLOW SECTION ==========
+    
+    // Modify flow entry
+    document.getElementById('modify-flow-entry').addEventListener('click', function() {
+        const modifyType = getValue('modify-flow-type');
+        const dpid = getValue('modify-flow-dpid');
+        
+        if (!dpid) {
+            showError('Please enter a Switch DPID');
+            return;
+        }
+        
+        // Build flow entry data
+        const flowData = {};
+        
+        // Add basic fields
+        const tableId = getValue('modify-flow-table-id');
+        if (tableId) flowData.table_id = parseInt(tableId);
+        
+        const priority = getValue('modify-flow-priority');
+        if (priority) flowData.priority = parseInt(priority);
+        
+        const cookie = getValue('modify-flow-cookie');
+        if (cookie) flowData.cookie = cookie;
+        
+        const cookieMask = getValue('modify-flow-cookie-mask');
+        if (cookieMask) flowData.cookie_mask = cookieMask;
+        
+        // Add match fields
+        const match = {};
+        let hasMatchFields = false;
+        
+        const inPort = getValue('modify-flow-in-port');
+        if (inPort) {
+            match.in_port = parseInt(inPort);
+            hasMatchFields = true;
+        }
+        
+        const dlSrc = getValue('modify-flow-dl-src');
+        if (dlSrc) {
+            match.dl_src = dlSrc;
+            hasMatchFields = true;
+        }
+        
+        const dlDst = getValue('modify-flow-dl-dst');
+        if (dlDst) {
+            match.dl_dst = dlDst;
+            hasMatchFields = true;
+        }
+        
+        const dlType = getValue('modify-flow-dl-type');
+        if (dlType) {
+            match.dl_type = dlType;
+            hasMatchFields = true;
+        }
+        
+        const vlanVid = getValue('modify-flow-vlan-vid');
+        if (vlanVid) {
+            match.vlan_vid = parseInt(vlanVid);
+            hasMatchFields = true;
+        }
+        
+        const ipProto = getValue('modify-flow-ip-proto');
+        if (ipProto) {
+            match.ip_proto = parseInt(ipProto);
+            hasMatchFields = true;
+        }
+        
+        // Only add match if there are fields
+        if (hasMatchFields) {
+            flowData.match = match;
+        }
+        
+        // Add actions
+        const actions = [];
+        let hasActions = false;
+        
+        const outputPort = getValue('modify-flow-output');
+        if (outputPort) {
+            actions.push({
+                type: 'OUTPUT',
+                port: outputPort
+            });
+            hasActions = true;
+        }
+        
+        const groupId = getValue('modify-flow-group');
+        if (groupId) {
+            actions.push({
+                type: 'GROUP',
+                group_id: parseInt(groupId)
+            });
+            hasActions = true;
+        }
+        
+        const setVlanVid = getValue('modify-flow-set-field-vlan-vid');
+        if (setVlanVid) {
+            actions.push({
+                type: 'SET_FIELD',
+                field: 'vlan_vid',
+                value: parseInt(setVlanVid)
+            });
+            hasActions = true;
+        }
+        
+        // Only add actions if there are any
+        if (hasActions) {
+            flowData.actions = actions;
+        }
+        
+        // Check for required fields
+        if (!hasMatchFields) {
+            showError('Please specify at least one match field');
+            return;
+        }
+        
+        callApi(`/stats/flowentry/${modifyType}`, 'POST', flowData);
+    });
+    
+    // ========== DELETE FLOW SECTION ==========
+    
+    // Delete flow entry
+    document.getElementById('delete-flow-entry').addEventListener('click', function() {
+        const deleteType = getValue('delete-flow-type');
+        const dpid = getValue('delete-flow-dpid');
+        
+        if (!dpid) {
+            showError('Please enter a Switch DPID');
+            return;
+        }
+        
+        if (deleteType === 'clear') {
+            // Delete all flows from switch
+            callApi(`/stats/flowentry/clear/${dpid}`, 'DELETE');
+            return;
+        }
+        
+        // Build flow entry data for delete/delete_strict
+        const flowData = {};
+        
+        // Add basic fields
+        const tableId = getValue('delete-flow-table-id');
+        if (tableId) flowData.table_id = parseInt(tableId);
+        
+        const priority = getValue('delete-flow-priority');
+        if (priority) flowData.priority = parseInt(priority);
+        
+        // Add match fields
+        const match = {};
+        let hasMatchFields = false;
+        
+        const inPort = getValue('delete-flow-in-port');
+        if (inPort) {
+            match.in_port = parseInt(inPort);
+            hasMatchFields = true;
+        }
+        
+        const dlSrc = getValue('delete-flow-dl-src');
+        if (dlSrc) {
+            match.dl_src = dlSrc;
+            hasMatchFields = true;
+        }
+        
+        // Only add match if there are fields
+        if (hasMatchFields) {
+            flowData.match = match;
+        }
+        
+        callApi(`/stats/flowentry/${deleteType}`, 'POST', flowData);
+    });
+    
+    /**
+     * Build filter data from form inputs
+     */
+    function buildFilterData() {
+        const filterData = {};
+        
+        // Add filter fields if they are populated
+        const tableId = getValue('filter-table-id');
+        if (tableId) filterData.table_id = parseInt(tableId);
+        
+        const outPort = getValue('filter-out-port');
+        if (outPort) filterData.out_port = parseInt(outPort);
+        
+        const outGroup = getValue('filter-out-group');
+        if (outGroup) filterData.out_group = parseInt(outGroup);
+        
+        const cookie = getValue('filter-cookie');
+        if (cookie) filterData.cookie = cookie;
+        
+        const cookieMask = getValue('filter-cookie-mask');
+        if (cookieMask) filterData.cookie_mask = cookieMask;
+        
+        return filterData;
+    }
+    
+    /**
+     * Common function to make API calls with proper error handling
+     */
+    async function callApi(endpoint, method = 'GET', data = null) {
+        // Show loading indicator
+        responseArea.textContent = 'Loading...';
+        responseArea.classList.add('loading');
+        responseArea.classList.remove('error');
+        
+        try {
+            // Prepare request options
+            const options = {
+                method: method,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                },
+                credentials: 'same-origin' // Important for cookie-based authentication
+            };
+            
+            // Add request body for POST/PUT/DELETE requests
+            if (data && ['POST', 'PUT', 'DELETE'].includes(method)) {
+                options.body = JSON.stringify(data);
+            }
+            
+            // Make the API call
+            const response = await fetch(endpoint, options);
+            
+            // Check if response is OK
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(`API Error (${response.status}): ${errorText}`);
+            }
+            
+            // Parse and display response
+            const responseData = await response.json();
+            responseArea.textContent = JSON.stringify(responseData, null, 2);
+            responseArea.classList.remove('loading');
+            
+            return responseData;
+        } catch (error) {
+            showError(error.message);
+        }
+    }
+    
+    /**
+     * Helper to get value from an input element
+     */
+    function getValue(id) {
+        const element = document.getElementById(id);
+        return element ? element.value.trim() : '';
+    }
+    
+    /**
+     * Display an error message in the response area
+     */
+    function showError(message) {
+        responseArea.textContent = `Error: ${message}`;
+        responseArea.classList.remove('loading');
+        responseArea.classList.add('error');
+    }
+});
+</script>
 {% endblock %}

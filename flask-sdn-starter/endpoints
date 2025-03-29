@@ -1,0 +1,80 @@
+## Firewall Management API Endpoints
+
+| Endpoint | Description |
+|----------|-------------|
+| GET /firewall/module/status | Get status of all firewall switches |
+| PUT /firewall/module/enable/{switch-id} | Enable firewall on switch |
+| PUT /firewall/module/disable/{switch-id} | Disable firewall on switch |
+| GET /firewall/log/status | Get log status of all firewall switches |
+| GET /firewall/rules/{switch-id} | Get firewall rules for switch |
+| GET /firewall/rules/{switch-id}/{vlan-id} | Get firewall rules for VLAN |
+| POST /firewall/rules/{switch-id} | Set firewall rule for switch |
+| POST /firewall/rules/{switch-id}/{vlan-id} | Set firewall rule for VLAN |
+| DELETE /firewall/rules/{switch-id} | Delete firewall rule from switch |
+| DELETE /firewall/rules/{switch-id}/{vlan-id} | Delete firewall rule from VLAN |
+
+## OpenFlow Management API Endpoints
+
+### Switch Information
+| Endpoint | Description |
+|----------|-------------|
+| GET /stats/switches | Retrieve all switches |
+| GET /stats/desc/<dpid> | Get switch description stats |
+| GET /stats/role/<dpid> | Get controller role (implied from POST endpoint) |
+| POST /stats/role | Modify controller role |
+
+### Flow Management
+| Endpoint | Description |
+|----------|-------------|
+| GET /stats/flow/<dpid> | Get flow stats of switch |
+| POST /stats/flow/<dpid> | Get filtered flow stats |
+| GET /stats/flowdesc/<dpid> | Get flow description stats of switch |
+| POST /stats/flowdesc/<dpid> | Get filtered flow description stats |
+| GET /stats/aggregateflow/<dpid> | Get aggregate flow stats of switch |
+| POST /stats/aggregateflow/<dpid> | Get filtered aggregate flow stats |
+| GET /stats/table/<dpid> | Get table stats of switch |
+| GET /stats/tablefeatures/<dpid> | Get table features stats of switch |
+
+### Flow Entry Management
+| Endpoint | Description |
+|----------|-------------|
+| POST /stats/flowentry/add | Add a flow entry |
+| POST /stats/flowentry/modify | Modify all matching flow entries |
+| POST /stats/flowentry/modify_strict | Modify flow entry with strict match |
+| POST /stats/flowentry/delete | Delete all matching flow entries |
+| POST /stats/flowentry/delete_strict | Delete strictly matching flow entry |
+| DELETE /stats/flowentry/clear/<dpid> | Delete all flow entries of switch |
+
+### Port Management
+| Endpoint | Description |
+|----------|-------------|
+| GET /stats/port/<dpid>[/<port>] | Get port stats of switch |
+| GET /stats/portdesc/<dpid>[/<port_no>] | Get port description of switch |
+| POST /stats/portdesc/modify | Modify physical port behavior |
+
+### Queue Management
+| Endpoint | Description |
+|----------|-------------|
+| GET /stats/queue/<dpid>[/<port>[/<queue_id>]] | Get queue stats of switch |
+| GET /stats/queueconfig/<dpid>[/<port>] | Get queue config stats of switch |
+| GET /stats/queuedesc/<dpid>[/<port>[/<queue_id>]] | Get queue description stats |
+
+### Meter Management
+| Endpoint | Description |
+|----------|-------------|
+| GET /stats/meterfeatures/<dpid> | Get meter features stats of switch |
+| GET /stats/meterconfig/<dpid>[/<meter_id>] | Get meter config stats |
+| GET /stats/meterdesc/<dpid>[/<meter_id>] | Get meter description stats |
+| GET /stats/meter/<dpid>[/<meter_id>] | Get meter stats of switch |
+| POST /stats/meterentry/add | Add a meter entry |
+| POST /stats/meterentry/modify | Modify a meter entry |
+| POST /stats/meterentry/delete | Delete a meter entry |
+
+### Group Management
+| Endpoint | Description |
+|----------|-------------|
+| GET /stats/groupdesc/<dpid>[/<group_id>] | Get group description stats |
+| GET /stats/group/<dpid>[/<group_id>] | Get group stats of switch |
+| POST /stats/groupentry/add | Add a group entry |
+| POST /stats/groupentry/modify | Modify a group entry |
+| POST /stats/groupentry/delete | Delete a group entry |

@@ -92,22 +92,16 @@
             <div class="flex items-center">
                 <div class="w-10 h-10 rounded-full bg-blue-500 mr-3 flex items-center justify-center">
                     <span class="text-sm font-bold">
-                        {% if session.get('username') %}
-                            {{ session.get('username')[0].upper() }}
-                        {% else %}
-                            A
-                        {% endif %}
+                        {{ g.user.username[0].upper() if g.user and g.user.username else 'U' }}
                     </span>
                 </div>
                 <div>
                     <div class="text-sm font-medium">
-                        {% if session.get('username') %}
-                            {{ session.get('username') }}
-                        {% else %}
-                            Admin
-                        {% endif %}
+                        {{ g.user.username if g.user and g.user.username else 'User' }}
                     </div>
-                    <div class="text-xs text-gray-400">Network Administrator</div>
+                    <div class="text-xs text-gray-400">
+                        {{ g.user.role.capitalize() if g.user and g.user.role else '' }}
+                    </div>
                 </div>
             </div>
         </div>
@@ -130,14 +124,13 @@
                 <span>SDN API</span>
             </a>
             
-            <a href="{{ url_for('api_ui') }}"
-            class="flex items-center px-3 py-2 mb-2 rounded-lg {% if request.endpoint == 'ui' %}bg-indigo-700{% else %}hover:bg-gray-700{% endif %}">
+            <a href="{{ url_for('flow_table') }}"
+            class="flex items-center px-3 py-2 mb-2 rounded-lg {% if request.endpoint == 'flow_table' %}bg-indigo-700{% else %}hover:bg-gray-700{% endif %}">
                 <div class="mr-3 text-gray-400">
                     <i data-lucide="git-branch" class="sidebar-icon"></i>
                 </div>
                 <span>Flow Table</span>
             </a>
-            
             <a href="{{ url_for('meter_group') }}" 
                class="flex items-center px-3 py-2 mb-2 rounded-lg {% if request.endpoint == 'meter_group' %}bg-indigo-700{% else %}hover:bg-gray-700{% endif %}">
                 <div class="mr-3 text-gray-400">

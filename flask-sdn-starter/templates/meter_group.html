@@ -1,8 +1,976 @@
 {% extends "base.html" %}
 
-{% block title %}Meter & Group Table{% endblock %}
-{% block page_title %}Meter and Group Table{% endblock %}
+{% block title %}Meter & Group Management{% endblock %}
+
+{% block styles %}
+<style>
+    /* Main containers */
+    .section-container {
+        background-color: #1e2232;
+        padding: 1.5rem;
+        border-radius: 0.5rem;
+        margin-bottom: 1.5rem;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+    
+    .section-title {
+        color: #60a5fa;
+        margin-bottom: 1rem;
+        font-size: 1.25rem;
+        font-weight: 600;
+    }
+    
+    /* Buttons and inputs */
+    .api-button {
+        background-color: #4f46e5;
+        color: white;
+        padding: 0.375rem 0.75rem;
+        border-radius: 0.25rem;
+        border: none;
+        margin: 0.25rem;
+        font-size: 0.875rem;
+        cursor: pointer;
+        transition: background-color 0.2s;
+    }
+    
+    .api-button:hover {
+        background-color: #4338ca;
+    }
+    
+    .api-button:active {
+        background-color: #3730a3;
+    }
+    
+    .api-input {
+        padding: 0.375rem 0.75rem;
+        border-radius: 0.25rem;
+        border: 1px solid #4b5563;
+        background-color: #374151;
+        color: white;
+        margin: 0.25rem;
+    }
+    
+    /* Response area */
+    #api-response {
+        background-color: #111827;
+        color: #d1d5db;
+        padding: 1rem;
+        border-radius: 0.375rem;
+        font-family: monospace;
+        font-size: 0.875rem;
+        white-space: pre-wrap;
+        min-height: 200px;
+        max-height: 500px;
+        overflow-y: auto;
+    }
+    
+    #api-response.error {
+        color: #f87171;
+    }
+    
+    #api-response.loading {
+        color: #60a5fa;
+    }
+    
+    /* Grid layout for form inputs */
+    .form-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: 1rem;
+    }
+    
+    /* Form field groups */
+    .form-group {
+        display: flex;
+        flex-direction: column;
+        margin-bottom: 0.75rem;
+    }
+    
+    .form-group label {
+        font-size: 0.875rem;
+        color: #9ca3af;
+        margin-bottom: 0.25rem;
+    }
+    
+    /* Textarea styling */
+    textarea.api-input {
+        min-height: 100px;
+        font-family: monospace;
+        resize: vertical;
+    }
+    
+    /* Tab styling */
+    .tab-container {
+        display: flex;
+        border-bottom: 1px solid #4b5563;
+        margin-bottom: 1rem;
+    }
+    
+    .tab {
+        padding: 0.5rem 1rem;
+        cursor: pointer;
+        color: #9ca3af;
+        border-bottom: 2px solid transparent;
+    }
+    
+    .tab.active {
+        color: #60a5fa;
+        border-bottom: 2px solid #60a5fa;
+    }
+    
+    .tab-content {
+        display: none;
+    }
+    
+    .tab-content.active {
+        display: block;
+    }
+</style>
+{% endblock %}
 
 {% block content %}
-    <p>Meter and group table settings.</p>
+<div>
+    <div class="flex items-center mb-6">
+        <img src="{{ url_for('static', filename='images/brain.png') }}" alt="SDN Logo" class="mr-3" width="50" height="50">
+        <h1 class="text-3xl font-bold text-blue-400">Meter & Group Management</h1>
+    </div>
+
+    <div class="tab-container">
+        <div class="tab active" data-tab="meter">Meters</div>
+        <div class="tab" data-tab="group">Groups</div>
+        <div class="tab" data-tab="queue">Queues</div>
+    </div>
+    
+    <!-- METER SECTION -->
+    <div id="meter-content" class="tab-content active">
+        <!-- Meter Information Section -->
+        <div class="section-container">
+            <h2 class="section-title">Meter Information</h2>
+            <div class="form-group">
+                <label>Switch DPID for Meter Features:</label>
+                <input type="text" placeholder="Enter DPID (hex)" class="api-input w-full" id="meter-features-dpid">
+                <button class="api-button mt-2" id="get-meter-features">Get Meter Features</button>
+            </div>
+            <button class="api-button mt-3" id="delete-meter-entry">Delete Meter</button>
+        </div>
+    </div>
+    
+    <!-- GROUP SECTION -->
+    <div id="group-content" class="tab-content">
+        <!-- Group Information Section -->
+        <div class="section-container">
+            <h2 class="section-title">Group Information</h2>
+            <div class="form-group">
+                <label>Switch DPID for Group Features:</label>
+                <input type="text" placeholder="Enter DPID (hex)" class="api-input w-full" id="group-features-dpid">
+                <button class="api-button mt-2" id="get-group-features">Get Group Features</button>
+            </div>
+            
+            <div class="form-group">
+                <label>Switch DPID for Group Description:</label>
+                <input type="text" placeholder="Enter DPID (hex)" class="api-input w-full" id="group-desc-dpid">
+                <button class="api-button mt-2" id="get-group-desc">Get Group Description</button>
+            </div>
+            
+            <div class="form-group">
+                <label>Switch DPID for Group Stats:</label>
+                <input type="text" placeholder="Enter DPID (hex)" class="api-input w-full" id="group-stats-dpid">
+                <button class="api-button mt-2" id="get-group-stats">Get Group Stats</button>
+            </div>
+        </div>
+        
+        <!-- Specific Group Section -->
+        <div class="section-container">
+            <h2 class="section-title">Specific Group Information</h2>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>Switch DPID:</label>
+                    <input type="text" placeholder="Enter DPID (hex)" class="api-input w-full" id="specific-group-dpid">
+                </div>
+                <div class="form-group">
+                    <label>Group ID:</label>
+                    <input type="text" placeholder="Enter Group ID" class="api-input w-full" id="specific-group-id">
+                </div>
+            </div>
+            <div class="flex flex-wrap gap-2 mt-2">
+                <button class="api-button" id="get-specific-group-desc">Get Specific Group Description</button>
+                <button class="api-button" id="get-specific-group-stats">Get Specific Group Stats</button>
+            </div>
+        </div>
+        
+        <!-- Add Group Section -->
+        <div class="section-container">
+            <h2 class="section-title">Add Group Entry</h2>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>Switch DPID:</label>
+                    <input type="text" placeholder="Enter DPID (hex)" class="api-input w-full" id="add-group-dpid">
+                </div>
+                <div class="form-group">
+                    <label>Group ID:</label>
+                    <input type="text" placeholder="Enter Group ID" class="api-input w-full" id="add-group-id">
+                </div>
+                <div class="form-group">
+                    <label>Group Type:</label>
+                    <select class="api-input w-full" id="add-group-type">
+                        <option value="ALL">ALL</option>
+                        <option value="SELECT">SELECT</option>
+                        <option value="INDIRECT">INDIRECT</option>
+                        <option value="FF">FF</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Action Buckets (JSON):</label>
+                    <textarea class="api-input w-full" id="add-group-buckets" placeholder='[{"weight":1, "watch_port":1, "watch_group":0, "actions":[{"type":"OUTPUT", "port":2}]}]'></textarea>
+                </div>
+            </div>
+            <button class="api-button mt-3" id="add-group-entry">Add Group</button>
+        </div>
+        
+        <!-- Modify Group Section -->
+        <div class="section-container">
+            <h2 class="section-title">Modify Group Entry</h2>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>Switch DPID:</label>
+                    <input type="text" placeholder="Enter DPID (hex)" class="api-input w-full" id="mod-group-dpid">
+                </div>
+                <div class="form-group">
+                    <label>Group ID:</label>
+                    <input type="text" placeholder="Enter Group ID" class="api-input w-full" id="mod-group-id">
+                </div>
+                <div class="form-group">
+                    <label>Group Type:</label>
+                    <select class="api-input w-full" id="mod-group-type">
+                        <option value="ALL">ALL</option>
+                        <option value="SELECT">SELECT</option>
+                        <option value="INDIRECT">INDIRECT</option>
+                        <option value="FF">FF</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Action Buckets (JSON):</label>
+                    <textarea class="api-input w-full" id="mod-group-buckets" placeholder='[{"weight":1, "watch_port":1, "watch_group":0, "actions":[{"type":"OUTPUT", "port":2}]}]'></textarea>
+                </div>
+            </div>
+            <button class="api-button mt-3" id="modify-group-entry">Modify Group</button>
+        </div>
+        
+        <!-- Delete Group Section -->
+        <div class="section-container">
+            <h2 class="section-title">Delete Group Entry</h2>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>Switch DPID:</label>
+                    <input type="text" placeholder="Enter DPID (hex)" class="api-input w-full" id="del-group-dpid">
+                </div>
+                <div class="form-group">
+                    <label>Group ID:</label>
+                    <input type="text" placeholder="Enter Group ID" class="api-input w-full" id="del-group-id">
+                </div>
+            </div>
+            <button class="api-button mt-3" id="delete-group-entry">Delete Group</button>
+        </div>
+    </div>
+    
+    <!-- QUEUE SECTION -->
+    <div id="queue-content" class="tab-content">
+        <!-- Queue Information Section -->
+        <div class="section-container">
+            <h2 class="section-title">Queue Information</h2>
+            <div class="form-group">
+                <label>Switch DPID for Queue Stats:</label>
+                <input type="text" placeholder="Enter DPID (hex)" class="api-input w-full" id="queue-stats-dpid">
+                <button class="api-button mt-2" id="get-queue-stats">Get Queue Stats</button>
+            </div>
+            
+            <div class="form-group">
+                <label>Switch DPID for Queue Config:</label>
+                <input type="text" placeholder="Enter DPID (hex)" class="api-input w-full" id="queue-config-dpid">
+                <button class="api-button mt-2" id="get-queue-config">Get Queue Config</button>
+            </div>
+            
+            <div class="form-group">
+                <label>Switch DPID for Queue Description:</label>
+                <input type="text" placeholder="Enter DPID (hex)" class="api-input w-full" id="queue-desc-dpid">
+                <button class="api-button mt-2" id="get-queue-desc">Get Queue Description</button>
+            </div>
+        </div>
+        
+        <!-- Specific Port Queue Section -->
+        <div class="section-container">
+            <h2 class="section-title">Specific Port Queue Information</h2>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>Switch DPID:</label>
+                    <input type="text" placeholder="Enter DPID (hex)" class="api-input w-full" id="port-queue-dpid">
+                </div>
+                <div class="form-group">
+                    <label>Port Number:</label>
+                    <input type="text" placeholder="Enter Port Number" class="api-input w-full" id="port-queue-port">
+                </div>
+            </div>
+            <div class="flex flex-wrap gap-2 mt-2">
+                <button class="api-button" id="get-port-queue-stats">Get Port Queue Stats</button>
+                <button class="api-button" id="get-port-queue-config">Get Port Queue Config</button>
+                <button class="api-button" id="get-port-queue-desc">Get Port Queue Description</button>
+            </div>
+        </div>
+        
+        <!-- Specific Queue Section -->
+        <div class="section-container">
+            <h2 class="section-title">Specific Queue Information</h2>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>Switch DPID:</label>
+                    <input type="text" placeholder="Enter DPID (hex)" class="api-input w-full" id="specific-queue-dpid">
+                </div>
+                <div class="form-group">
+                    <label>Port Number:</label>
+                    <input type="text" placeholder="Enter Port Number" class="api-input w-full" id="specific-queue-port">
+                </div>
+                <div class="form-group">
+                    <label>Queue ID:</label>
+                    <input type="text" placeholder="Enter Queue ID" class="api-input w-full" id="specific-queue-id">
+                </div>
+            </div>
+            <div class="flex flex-wrap gap-2 mt-2">
+                <button class="api-button" id="get-specific-queue-stats">Get Specific Queue Stats</button>
+                <button class="api-button" id="get-specific-queue-desc">Get Specific Queue Description</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Response Area -->
+    <div class="section-container">
+        <h2 class="section-title">Response</h2>
+        <div id="api-response">
+            <p>API response will be displayed here...</p>
+        </div>
+    </div>
+</div>
 {% endblock %}
+
+{% block scripts %}
+<script>
+// Wait for document to be fully loaded
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize the response area
+    const responseArea = document.getElementById('api-response');
+    
+    // Tab switching functionality
+    const tabs = document.querySelectorAll('.tab');
+    const tabContents = document.querySelectorAll('.tab-content');
+    
+    tabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+            // Remove active class from all tabs
+            tabs.forEach(t => t.classList.remove('active'));
+            tabContents.forEach(c => c.classList.remove('active'));
+            
+            // Add active class to clicked tab and its content
+            tab.classList.add('active');
+            const tabId = tab.getAttribute('data-tab');
+            document.getElementById(`${tabId}-content`).classList.add('active');
+        });
+    });
+    
+    /**
+     * Common function to make API calls with proper error handling
+     * @param {string} endpoint - API endpoint to call
+     * @param {string} method - HTTP method (GET, POST, PUT, DELETE)
+     * @param {object|null} data - Request body data (for POST/PUT)
+     */
+    async function callApi(endpoint, method = 'GET', data = null) {
+        // Show loading indicator
+        responseArea.textContent = 'Loading...';
+        responseArea.classList.add('loading');
+        
+        try {
+            // Prepare request options
+            const options = {
+                method: method,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                },
+                credentials: 'same-origin' // Important for cookie-based authentication
+            };
+            
+            // Add request body for POST/PUT/DELETE requests
+            if (data && ['POST', 'PUT', 'DELETE'].includes(method)) {
+                options.body = JSON.stringify(data);
+            }
+            
+            // Make the API call
+            const response = await fetch(endpoint, options);
+            
+            // Check if response is OK
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(`API Error (${response.status}): ${errorText}`);
+            }
+            
+            // Parse and display response
+            const responseData = await response.json();
+            responseArea.textContent = JSON.stringify(responseData, null, 2);
+            responseArea.classList.remove('loading');
+            responseArea.classList.remove('error');
+            
+            return responseData;
+        } catch (error) {
+            // Display error message
+            responseArea.textContent = `Error: ${error.message}`;
+            responseArea.classList.remove('loading');
+            responseArea.classList.add('error');
+            console.error(error);
+        }
+    }
+    
+    /**
+     * Helper to get value from an input element
+     * @param {string} id - Element ID
+     * @returns {string} - Element value or empty string if not found
+     */
+    function getValue(id) {
+        const element = document.getElementById(id);
+        return element ? element.value.trim() : '';
+    }
+    
+    /**
+     * Helper to parse JSON from a textarea
+     * @param {string} id - Element ID
+     * @returns {object|null} - Parsed JSON or null if invalid
+     */
+    function getJson(id) {
+        try {
+            const text = getValue(id);
+            if (!text) return null;
+            return JSON.parse(text);
+        } catch (error) {
+            responseArea.textContent = `Error parsing JSON: ${error.message}`;
+            responseArea.classList.add('error');
+            return null;
+        }
+    }
+    
+    // ========== METER FUNCTIONS ==========
+    
+    // Get meter features
+    document.getElementById('get-meter-features').addEventListener('click', function() {
+        const dpid = getValue('meter-features-dpid');
+        if (!dpid) {
+            responseArea.textContent = 'Error: Please enter a Switch DPID';
+            responseArea.classList.add('error');
+            return;
+        }
+        callApi(`/stats/meterfeatures/${dpid}`);
+    });
+    
+    // Get meter config
+    document.getElementById('get-meter-config').addEventListener('click', function() {
+        const dpid = getValue('meter-config-dpid');
+        if (!dpid) {
+            responseArea.textContent = 'Error: Please enter a Switch DPID';
+            responseArea.classList.add('error');
+            return;
+        }
+        callApi(`/stats/meterconfig/${dpid}`);
+    });
+    
+    // Get meter description
+    document.getElementById('get-meter-desc').addEventListener('click', function() {
+        const dpid = getValue('meter-desc-dpid');
+        if (!dpid) {
+            responseArea.textContent = 'Error: Please enter a Switch DPID';
+            responseArea.classList.add('error');
+            return;
+        }
+        callApi(`/stats/meterdesc/${dpid}`);
+    });
+    
+    // Get meter stats
+    document.getElementById('get-meter-stats').addEventListener('click', function() {
+        const dpid = getValue('meter-stats-dpid');
+        if (!dpid) {
+            responseArea.textContent = 'Error: Please enter a Switch DPID';
+            responseArea.classList.add('error');
+            return;
+        }
+        callApi(`/stats/meter/${dpid}`);
+    });
+    
+    // Get specific meter config
+    document.getElementById('get-specific-meter-config').addEventListener('click', function() {
+        const dpid = getValue('specific-meter-dpid');
+        const meterId = getValue('specific-meter-id');
+        if (!dpid || !meterId) {
+            responseArea.textContent = 'Error: Please enter both Switch DPID and Meter ID';
+            responseArea.classList.add('error');
+            return;
+        }
+        callApi(`/stats/meterconfig/${dpid}/${meterId}`);
+    });
+    
+    // Get specific meter description
+    document.getElementById('get-specific-meter-desc').addEventListener('click', function() {
+        const dpid = getValue('specific-meter-dpid');
+        const meterId = getValue('specific-meter-id');
+        if (!dpid || !meterId) {
+            responseArea.textContent = 'Error: Please enter both Switch DPID and Meter ID';
+            responseArea.classList.add('error');
+            return;
+        }
+        callApi(`/stats/meterdesc/${dpid}/${meterId}`);
+    });
+    
+    // Get specific meter stats
+    document.getElementById('get-specific-meter-stats').addEventListener('click', function() {
+        const dpid = getValue('specific-meter-dpid');
+        const meterId = getValue('specific-meter-id');
+        if (!dpid || !meterId) {
+            responseArea.textContent = 'Error: Please enter both Switch DPID and Meter ID';
+            responseArea.classList.add('error');
+            return;
+        }
+        callApi(`/stats/meter/${dpid}/${meterId}`);
+    });
+    
+    // Add meter entry
+    document.getElementById('add-meter-entry').addEventListener('click', function() {
+        const dpid = getValue('add-meter-dpid');
+        const meterId = getValue('add-meter-id');
+        const flags = getValue('add-meter-flags');
+        const bandType = getValue('add-meter-band-type');
+        const rate = getValue('add-meter-rate');
+        const burstSize = getValue('add-meter-burst-size');
+        
+        if (!dpid || !meterId || !flags || !bandType || !rate) {
+            responseArea.textContent = 'Error: Please fill in all required fields';
+            responseArea.classList.add('error');
+            return;
+        }
+        
+        const meterData = {
+            dpid: dpid,
+            meter_id: parseInt(meterId),
+            flags: flags.split(','),
+            bands: [
+                {
+                    type: bandType,
+                    rate: parseInt(rate),
+                    burst_size: burstSize ? parseInt(burstSize) : 0
+                }
+            ]
+        };
+        
+        callApi('/stats/meterentry/add', 'POST', meterData);
+    });
+    
+    // Modify meter entry
+    document.getElementById('modify-meter-entry').addEventListener('click', function() {
+        const dpid = getValue('mod-meter-dpid');
+        const meterId = getValue('mod-meter-id');
+        const flags = getValue('mod-meter-flags');
+        const bandType = getValue('mod-meter-band-type');
+        const rate = getValue('mod-meter-rate');
+        const burstSize = getValue('mod-meter-burst-size');
+        
+        if (!dpid || !meterId || !flags || !bandType || !rate) {
+            responseArea.textContent = 'Error: Please fill in all required fields';
+            responseArea.classList.add('error');
+            return;
+        }
+        
+        const meterData = {
+            dpid: dpid,
+            meter_id: parseInt(meterId),
+            flags: flags.split(','),
+            bands: [
+                {
+                    type: bandType,
+                    rate: parseInt(rate),
+                    burst_size: burstSize ? parseInt(burstSize) : 0
+                }
+            ]
+        };
+        
+        callApi('/stats/meterentry/modify', 'POST', meterData);
+    });
+    
+    // Delete meter entry
+    document.getElementById('delete-meter-entry').addEventListener('click', function() {
+        const dpid = getValue('del-meter-dpid');
+        const meterId = getValue('del-meter-id');
+        
+        if (!dpid || !meterId) {
+            responseArea.textContent = 'Error: Please enter both Switch DPID and Meter ID';
+            responseArea.classList.add('error');
+            return;
+        }
+        
+        const meterData = {
+            dpid: dpid,
+            meter_id: parseInt(meterId)
+        };
+        
+        callApi('/stats/meterentry/delete', 'POST', meterData);
+    });
+    
+    // ========== GROUP FUNCTIONS ==========
+    
+    // Get group features
+    document.getElementById('get-group-features').addEventListener('click', function() {
+        const dpid = getValue('group-features-dpid');
+        if (!dpid) {
+            responseArea.textContent = 'Error: Please enter a Switch DPID';
+            responseArea.classList.add('error');
+            return;
+        }
+        callApi(`/stats/groupfeatures/${dpid}`);
+    });
+    
+    // Get group description
+    document.getElementById('get-group-desc').addEventListener('click', function() {
+        const dpid = getValue('group-desc-dpid');
+        if (!dpid) {
+            responseArea.textContent = 'Error: Please enter a Switch DPID';
+            responseArea.classList.add('error');
+            return;
+        }
+        callApi(`/stats/groupdesc/${dpid}`);
+    });
+    
+    // Get group stats
+    document.getElementById('get-group-stats').addEventListener('click', function() {
+        const dpid = getValue('group-stats-dpid');
+        if (!dpid) {
+            responseArea.textContent = 'Error: Please enter a Switch DPID';
+            responseArea.classList.add('error');
+            return;
+        }
+        callApi(`/stats/group/${dpid}`);
+    });
+    
+    // Get specific group description
+    document.getElementById('get-specific-group-desc').addEventListener('click', function() {
+        const dpid = getValue('specific-group-dpid');
+        const groupId = getValue('specific-group-id');
+        if (!dpid || !groupId) {
+            responseArea.textContent = 'Error: Please enter both Switch DPID and Group ID';
+            responseArea.classList.add('error');
+            return;
+        }
+        callApi(`/stats/groupdesc/${dpid}/${groupId}`);
+    });
+    
+    // Get specific group stats
+    document.getElementById('get-specific-group-stats').addEventListener('click', function() {
+        const dpid = getValue('specific-group-dpid');
+        const groupId = getValue('specific-group-id');
+        if (!dpid || !groupId) {
+            responseArea.textContent = 'Error: Please enter both Switch DPID and Group ID';
+            responseArea.classList.add('error');
+            return;
+        }
+        callApi(`/stats/group/${dpid}/${groupId}`);
+    });
+    
+    // Add group entry
+    document.getElementById('add-group-entry').addEventListener('click', function() {
+        const dpid = getValue('add-group-dpid');
+        const groupId = getValue('add-group-id');
+        const groupType = getValue('add-group-type');
+        const buckets = getJson('add-group-buckets');
+        
+        if (!dpid || !groupId || !groupType || !buckets) {
+            responseArea.textContent = 'Error: Please fill in all required fields';
+            responseArea.classList.add('error');
+            return;
+        }
+        
+        const groupData = {
+            dpid: dpid,
+            group_id: parseInt(groupId),
+            type: groupType,
+            buckets: buckets
+        };
+        
+        callApi('/stats/groupentry/add', 'POST', groupData);
+    });
+    
+    // Modify group entry
+    document.getElementById('modify-group-entry').addEventListener('click', function() {
+        const dpid = getValue('mod-group-dpid');
+        const groupId = getValue('mod-group-id');
+        const groupType = getValue('mod-group-type');
+        const buckets = getJson('mod-group-buckets');
+        
+        if (!dpid || !groupId || !groupType || !buckets) {
+            responseArea.textContent = 'Error: Please fill in all required fields';
+            responseArea.classList.add('error');
+            return;
+        }
+        
+        const groupData = {
+            dpid: dpid,
+            group_id: parseInt(groupId),
+            type: groupType,
+            buckets: buckets
+        };
+        
+        callApi('/stats/groupentry/modify', 'POST', groupData);
+    });
+    
+    // Delete group entry
+    document.getElementById('delete-group-entry').addEventListener('click', function() {
+        const dpid = getValue('del-group-dpid');
+        const groupId = getValue('del-group-id');
+        
+        if (!dpid || !groupId) {
+            responseArea.textContent = 'Error: Please enter both Switch DPID and Group ID';
+            responseArea.classList.add('error');
+            return;
+        }
+        
+        const groupData = {
+            dpid: dpid,
+            group_id: parseInt(groupId)
+        };
+        
+        callApi('/stats/groupentry/delete', 'POST', groupData);
+    });
+    
+    // ========== QUEUE FUNCTIONS ==========
+    
+    // Get queue stats
+    document.getElementById('get-queue-stats').addEventListener('click', function() {
+        const dpid = getValue('queue-stats-dpid');
+        if (!dpid) {
+            responseArea.textContent = 'Error: Please enter a Switch DPID';
+            responseArea.classList.add('error');
+            return;
+        }
+        callApi(`/stats/queue/${dpid}`);
+    });
+    
+    // Get queue config
+    document.getElementById('get-queue-config').addEventListener('click', function() {
+        const dpid = getValue('queue-config-dpid');
+        if (!dpid) {
+            responseArea.textContent = 'Error: Please enter a Switch DPID';
+            responseArea.classList.add('error');
+            return;
+        }
+        callApi(`/stats/queueconfig/${dpid}`);
+    });
+    
+    // Get queue description
+    document.getElementById('get-queue-desc').addEventListener('click', function() {
+        const dpid = getValue('queue-desc-dpid');
+        if (!dpid) {
+            responseArea.textContent = 'Error: Please enter a Switch DPID';
+            responseArea.classList.add('error');
+            return;
+        }
+        callApi(`/stats/queuedesc/${dpid}`);
+    });
+    
+    // Get port queue stats
+    document.getElementById('get-port-queue-stats').addEventListener('click', function() {
+        const dpid = getValue('port-queue-dpid');
+        const port = getValue('port-queue-port');
+        if (!dpid || !port) {
+            responseArea.textContent = 'Error: Please enter both Switch DPID and Port Number';
+            responseArea.classList.add('error');
+            return;
+        }
+        callApi(`/stats/queue/${dpid}/${port}`);
+    });
+    
+    // Get port queue config
+    document.getElementById('get-port-queue-config').addEventListener('click', function() {
+        const dpid = getValue('port-queue-dpid');
+        const port = getValue('port-queue-port');
+        if (!dpid || !port) {
+            responseArea.textContent = 'Error: Please enter both Switch DPID and Port Number';
+            responseArea.classList.add('error');
+            return;
+        }
+        callApi(`/stats/queueconfig/${dpid}/${port}`);
+    });
+    
+    // Get port queue description
+    document.getElementById('get-port-queue-desc').addEventListener('click', function() {
+        const dpid = getValue('port-queue-dpid');
+        const port = getValue('port-queue-port');
+        if (!dpid || !port) {
+            responseArea.textContent = 'Error: Please enter both Switch DPID and Port Number';
+            responseArea.classList.add('error');
+            return;
+        }
+        callApi(`/stats/queuedesc/${dpid}/${port}`);
+    });
+    
+    // Get specific queue stats
+    document.getElementById('get-specific-queue-stats').addEventListener('click', function() {
+        const dpid = getValue('specific-queue-dpid');
+        const port = getValue('specific-queue-port');
+        const queueId = getValue('specific-queue-id');
+        if (!dpid || !port || !queueId) {
+            responseArea.textContent = 'Error: Please enter Switch DPID, Port Number and Queue ID';
+            responseArea.classList.add('error');
+            return;
+        }
+        callApi(`/stats/queue/${dpid}/${port}/${queueId}`);
+    });
+    
+    // Get specific queue description
+    document.getElementById('get-specific-queue-desc').addEventListener('click', function() {
+        const dpid = getValue('specific-queue-dpid');
+        const port = getValue('specific-queue-port');
+        const queueId = getValue('specific-queue-id');
+        if (!dpid || !port || !queueId) {
+            responseArea.textContent = 'Error: Please enter Switch DPID, Port Number and Queue ID';
+            responseArea.classList.add('error');
+            return;
+        }
+        callApi(`/stats/queuedesc/${dpid}/${port}/${queueId}`);
+    });
+});
+</script>
+{% endblock %}
+            <div class="form-group">
+                <label>Switch DPID for Meter Config:</label>
+                <input type="text" placeholder="Enter DPID (hex)" class="api-input w-full" id="meter-config-dpid">
+                <button class="api-button mt-2" id="get-meter-config">Get Meter Config</button>
+            </div>
+            
+            <div class="form-group">
+                <label>Switch DPID for Meter Description:</label>
+                <input type="text" placeholder="Enter DPID (hex)" class="api-input w-full" id="meter-desc-dpid">
+                <button class="api-button mt-2" id="get-meter-desc">Get Meter Description</button>
+            </div>
+            
+            <div class="form-group">
+                <label>Switch DPID for Meter Stats:</label>
+                <input type="text" placeholder="Enter DPID (hex)" class="api-input w-full" id="meter-stats-dpid">
+                <button class="api-button mt-2" id="get-meter-stats">Get Meter Stats</button>
+            </div>
+        </div>
+        
+        <!-- Specific Meter Section -->
+        <div class="section-container">
+            <h2 class="section-title">Specific Meter Information</h2>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>Switch DPID:</label>
+                    <input type="text" placeholder="Enter DPID (hex)" class="api-input w-full" id="specific-meter-dpid">
+                </div>
+                <div class="form-group">
+                    <label>Meter ID:</label>
+                    <input type="text" placeholder="Enter Meter ID" class="api-input w-full" id="specific-meter-id">
+                </div>
+            </div>
+            <div class="flex flex-wrap gap-2 mt-2">
+                <button class="api-button" id="get-specific-meter-config">Get Specific Meter Config</button>
+                <button class="api-button" id="get-specific-meter-desc">Get Specific Meter Description</button>
+                <button class="api-button" id="get-specific-meter-stats">Get Specific Meter Stats</button>
+            </div>
+        </div>
+        
+        <!-- Add Meter Section -->
+        <div class="section-container">
+            <h2 class="section-title">Add Meter Entry</h2>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>Switch DPID:</label>
+                    <input type="text" placeholder="Enter DPID (hex)" class="api-input w-full" id="add-meter-dpid">
+                </div>
+                <div class="form-group">
+                    <label>Meter ID:</label>
+                    <input type="text" placeholder="Enter Meter ID" class="api-input w-full" id="add-meter-id">
+                </div>
+                <div class="form-group">
+                    <label>Flags:</label>
+                    <select class="api-input w-full" id="add-meter-flags">
+                        <option value="KBPS">KBPS</option>
+                        <option value="PKTPS">PKTPS</option>
+                        <option value="BURST">BURST</option>
+                        <option value="STATS">STATS</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Band Type:</label>
+                    <select class="api-input w-full" id="add-meter-band-type">
+                        <option value="DROP">DROP</option>
+                        <option value="DSCP_REMARK">DSCP_REMARK</option>
+                        <option value="EXPERIMENTER">EXPERIMENTER</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Rate:</label>
+                    <input type="text" placeholder="Enter Rate" class="api-input w-full" id="add-meter-rate">
+                </div>
+                <div class="form-group">
+                    <label>Burst Size:</label>
+                    <input type="text" placeholder="Enter Burst Size" class="api-input w-full" id="add-meter-burst-size">
+                </div>
+            </div>
+            <button class="api-button mt-3" id="add-meter-entry">Add Meter</button>
+        </div>
+        
+        <!-- Modify Meter Section -->
+        <div class="section-container">
+            <h2 class="section-title">Modify Meter Entry</h2>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>Switch DPID:</label>
+                    <input type="text" placeholder="Enter DPID (hex)" class="api-input w-full" id="mod-meter-dpid">
+                </div>
+                <div class="form-group">
+                    <label>Meter ID:</label>
+                    <input type="text" placeholder="Enter Meter ID" class="api-input w-full" id="mod-meter-id">
+                </div>
+                <div class="form-group">
+                    <label>Flags:</label>
+                    <select class="api-input w-full" id="mod-meter-flags">
+                        <option value="KBPS">KBPS</option>
+                        <option value="PKTPS">PKTPS</option>
+                        <option value="BURST">BURST</option>
+                        <option value="STATS">STATS</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Band Type:</label>
+                    <select class="api-input w-full" id="mod-meter-band-type">
+                        <option value="DROP">DROP</option>
+                        <option value="DSCP_REMARK">DSCP_REMARK</option>
+                        <option value="EXPERIMENTER">EXPERIMENTER</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Rate:</label>
+                    <input type="text" placeholder="Enter Rate" class="api-input w-full" id="mod-meter-rate">
+                </div>
+                <div class="form-group">
+                    <label>Burst Size:</label>
+                    <input type="text" placeholder="Enter Burst Size" class="api-input w-full" id="mod-meter-burst-size">
+                </div>
+            </div>
+            <button class="api-button mt-3" id="modify-meter-entry">Modify Meter</button>
+        </div>
+        
+        <!-- Delete Meter Section -->
+        <div class="section-container">
+            <h2 class="section-title">Delete Meter Entry</h2>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>Switch DPID:</label>
+                    <input type="text" placeholder="Enter DPID (hex)" class="api-input w-full" id="del-meter-dpid">
+                </div>
+                <div class="form-group">
+                    <label>Meter ID:</label>
+                    <input type="text" placeholder="Enter Meter ID" class="api-input w-full" id="del-meter-id">
+                </div>
+            </div>
