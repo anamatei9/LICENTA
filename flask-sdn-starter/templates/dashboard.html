@@ -1,33 +1,329 @@
+{% extends "base.html" %}
+
 {% block title %}Dashboard{% endblock %}
 
 {% block content %}
-<div>
-    <h1 class="text-3xl font-bold mb-6">Dashboard</h1>
-    
-    <!-- Overview Cards -->
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-        <div class="bg-gray-800 p-4 rounded-lg">
-            <h3 class="text-lg font-medium mb-2">Switches</h3>
-            <p class="text-2xl font-bold">3</p>
-        </div>
-        
-        <div class="bg-gray-800 p-4 rounded-lg">
-            <h3 class="text-lg font-medium mb-2">Flows</h3>
-            <p class="text-2xl font-bold">27</p>
-        </div>
-        
-        <div class="bg-gray-800 p-4 rounded-lg">
-            <h3 class="text-lg font-medium mb-2">Devices</h3>
-            <p class="text-2xl font-bold">12</p>
-        </div>
+<div class="flex items-center mb-6">
+    <h1 class="text-3xl font-bold text-blue-400">Dashboard</h1>
+</div>
+
+
+<!-- Devices Section -->
+<div class="bg-gray-800 rounded-lg shadow-lg overflow-hidden mb-6">
+    <div class="p-4 border-b border-gray-700 bg-gray-900">
+        <h2 class="text-lg font-semibold">Switches</h2>
     </div>
     
-    <!-- Main Dashboard Content -->
-    <div class="bg-gray-800 rounded-lg p-6">
-        <h2 class="text-xl font-semibold mb-4">Network Status</h2>
-        <p class="text-gray-400">Dashboard content will be displayed here.</p>
-        
-        <!-- You can add your dashboard content here -->
+    <div class="p-4" id="switches-container">
+        <p id="loading-message" class="text-gray-400">Loading switches...</p>
     </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize dashboard
+    console.log('Dashboard loaded');
+    initDashboard();
+    
+    // Main dashboard setup
+    function initDashboard() {
+        fetchSwitches();
+        
+        // Set up polling interval (every 3 seconds for more responsive updates)
+        setInterval(fetchSwitches, 3000);
+    }
+    
+    // Global data storage
+    let switchesData = {};
+    
+    // Maximum port speed in Mbps (for scaling calculations)
+    const MAX_PORT_SPEED = 100; // 100 Mbps
+    
+    // Fetch switches
+    //Trimite cererea GET către API
+    function fetchSwitches() {
+        fetch('/stats/switches', {
+            headers: {
+                'Authorization': `Bearer ${getToken()}`
+            }
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Failed to fetch switches');
+            }
+            return response.json();
+        })
+        .then(switches => {
+            // If no switches found
+            if (switches.length === 0) {
+                document.getElementById('loading-message').textContent = 'No switches found.';
+                return;
+            }
+            
+            // Clear loading message
+            document.getElementById('loading-message').style.display = 'none';
+            
+            // Initialize container if first time
+            const container = document.getElementById('switches-container');
+            if (!document.getElementById('switches-list')) {
+                const switchesList = document.createElement('div');
+                switchesList.id = 'switches-list';
+                switchesList.className = 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4';
+                container.appendChild(switchesList);
+            }
+            
+            // Process each switch
+            switches.forEach(switchId => {
+                fetchSwitchDetails(switchId);
+            });
+        })
+        .catch(error => {
+            console.error('Error fetching switches:', error);
+            document.getElementById('loading-message').textContent = 'Error loading switches.';
+        });
+    }
+    
+    // Fetch switch details
+    function fetchSwitchDetails(switchId) {
+        // Initialize switch data if not exists
+        if (!switchesData[switchId]) {
+            switchesData[switchId] = {
+                description: null,
+                ports: [],
+                prevPortStats: {}
+            };
+        }
+        
+        // Fetch description and port stats
+        Promise.all([
+            fetch(`/stats/desc/${switchId}`, {
+                headers: { 'Authorization': `Bearer ${getToken()}` }
+            }).then(res => res.ok ? res.json() : null),
+            
+            fetch(`/stats/port/${switchId}`, {
+                headers: { 'Authorization': `Bearer ${getToken()}` }
+            }).then(res => res.ok ? res.json() : null)
+        ])
+        .then(([descData, portData]) => {
+            // Process description
+            if (descData) {
+                switchesData[switchId].description = descData[switchId];
+            }
+            
+            // Process port data
+            if (portData && portData[switchId]) {
+                switchesData[switchId].ports = portData[switchId];
+                calculatePortTraffic(switchId, portData[switchId]);
+            }
+            
+            // Render switch UI
+            renderSwitch(switchId);
+        })
+        .catch(error => {
+            console.error(`Error fetching details for switch ${switchId}:`, error);
+        });
+    }
+    
+    // Calculate traffic for each port
+    function calculatePortTraffic(switchId, ports) {
+        const prevPortStats = switchesData[switchId].prevPortStats || {};
+        let portTraffic = {};
+        
+        // Filter valid ports
+        const validPorts = ports.filter(port => port.port_no < 65530);
+        
+        // Calculate traffic for each port
+        validPorts.forEach(port => {
+            const portNo = port.port_no;
+            
+            // Get current RX/TX byte counts (convert to numbers if needed)
+            const rxBytes = typeof port.rx_bytes === 'number' ? port.rx_bytes : 
+                         (typeof port.rx_bytes === 'string' ? parseInt(port.rx_bytes) : 0);
+            const txBytes = typeof port.tx_bytes === 'number' ? port.tx_bytes : 
+                         (typeof port.tx_bytes === 'string' ? parseInt(port.tx_bytes) : 0);
+            
+            // Initialize port traffic
+            portTraffic[portNo] = { mbps: 0, hasActivity: false };
+            
+            // Calculate delta if we have previous stats for this port
+            if (prevPortStats[portNo]) {
+                const prevRxBytes = prevPortStats[portNo].rx_bytes || 0;
+                const prevTxBytes = prevPortStats[portNo].tx_bytes || 0;
+                const deltaTime = (new Date() - new Date(prevPortStats[portNo].timestamp)) / 1000;
+                
+                if (deltaTime > 0) {
+                    const rxDelta = rxBytes - prevRxBytes;
+                    const txDelta = txBytes - prevTxBytes;
+                    
+                    // Check if any bytes have changed (even tiny amounts)
+                    portTraffic[portNo].hasActivity = (rxDelta > 0 || txDelta > 0);
+                    
+                    // Calculate Mbps (even for small changes)
+                    if (rxDelta >= 0 && txDelta >= 0) {
+                        const totalBits = (rxDelta + txDelta) * 8;
+                        const mbps = totalBits / (deltaTime * 1000000);
+                        
+                        // Store port traffic - even tiny amounts
+                        portTraffic[portNo].mbps = isNaN(mbps) ? 0 : mbps;
+                    }
+                }
+            }
+            
+            // Store current stats for next calculation
+            prevPortStats[portNo] = {
+                rx_bytes: rxBytes,
+                tx_bytes: txBytes,
+                timestamp: new Date()
+            };
+        });
+        
+        // Update switch data
+        switchesData[switchId].portTraffic = portTraffic;
+        switchesData[switchId].prevPortStats = prevPortStats;
+    }
+    
+    // Render switch card
+    function renderSwitch(switchId) {
+        const switchData = switchesData[switchId];
+        
+        // Get or create switch element
+        const switchesList = document.getElementById('switches-list');
+        let switchElement = document.getElementById(`switch-${switchId}`);
+        
+        if (!switchElement) {
+            switchElement = document.createElement('div');
+            switchElement.id = `switch-${switchId}`;
+            switchElement.className = 'bg-gray-700 rounded-lg p-4 shadow';
+            switchesList.appendChild(switchElement);
+        }
+        
+        // Determine switch model name
+        let modelName = 'Unknown';
+        if (switchData.description) {
+            modelName = switchData.description.hw_desc || 
+                        switchData.description.mfr_desc || 
+                        'Unknown';
+        }
+        
+        // Calculate status color based on port traffic levels
+        let statusColor = 'green';
+        const portTraffic = switchData.portTraffic || {};
+        let maxMbps = 0;
+        let hasAnyActivity = false;
+        
+        // Find the port with highest traffic and check if any activity
+        Object.values(portTraffic).forEach(pt => {
+            if (pt.hasActivity) {
+                hasAnyActivity = true;
+                maxMbps = Math.max(maxMbps, pt.mbps);
+            }
+        });
+        
+        // Set status color based on maximum traffic (100 Mbps max)
+        if (maxMbps > 85) {
+            statusColor = 'red';      // > 85 Mbps (85%)
+        } else if (maxMbps > 50) {
+            statusColor = 'yellow';   // > 50 Mbps (50%)
+        } else if (hasAnyActivity) {
+            statusColor = 'green';    // < 50 Mbps (0-50%) with activity
+        } else {
+            statusColor = 'green';    // No activity
+        }
+        
+        // Create port list
+        let portsList = '<div class="text-gray-400">No port data available</div>';
+        
+        if (Object.keys(portTraffic).length > 0) {
+            portsList = '<div class="space-y-2">';
+            
+            // Sort ports by number
+            const sortedPorts = Object.keys(portTraffic).sort((a, b) => parseInt(a) - parseInt(b));
+            
+            // Build port list
+            sortedPorts.forEach(portNo => {
+                const mbps = portTraffic[portNo].mbps;
+                const hasActivity = portTraffic[portNo].hasActivity;
+                
+                // Determine bar color based on Mbps (100 Mbps max)
+                let barColor = 'bg-gray-600'; // Default inactive
+                
+                if (hasActivity) {
+                    if (mbps > 85) {
+                        barColor = 'bg-red-500';     // > 85 Mbps (85%)
+                    } else if (mbps > 50) {
+                        barColor = 'bg-yellow-500';  // > 50 Mbps (50%)
+                    } else {
+                        barColor = 'bg-green-500';   // < 50 Mbps (0-50%)
+                    }
+                }
+                
+                // Calculate bar width based on percentage of 100 Mbps max
+                let barWidth = 0;
+                if (hasActivity) {
+                    if (mbps < 0.5) {
+                        // Make very small traffic visible
+                        barWidth = 2;
+                    } else {
+                        // Direct percentage of max (100 Mbps)
+                        barWidth = Math.min((mbps / MAX_PORT_SPEED) * 100, 100);
+                    }
+                }
+                
+                // Format for display
+                let displayMbps = mbps;
+                if (mbps < 0.01 && mbps > 0) {
+                    displayMbps = "< 0.01";
+                } else {
+                    displayMbps = mbps.toFixed(1);
+                }
+                
+                portsList += `
+                    <div class="flex items-center justify-between">
+                        <span class="text-sm">Port ${portNo}</span>
+                        <div class="flex-1 mx-2 bg-gray-800 rounded-full h-2">
+                            <div class="${barColor} h-2 rounded-full" style="width: ${barWidth}%"></div>
+                        </div>
+                        <span class="text-sm">${displayMbps} Mbps</span>
+                    </div>
+                `;
+            });
+            
+            portsList += '</div>';
+        }
+        
+        // Update switch element HTML
+        switchElement.innerHTML = `
+            <div class="flex justify-between items-start mb-3">
+                <h3 class="text-lg font-medium">Switch: s${switchId} <span style="color: ${statusColor}">●</span></h3>
+            </div>
+            <div class="text-sm text-gray-400 mb-3">Model: ${modelName}</div>
+            <div class="text-sm">
+                <div class="text-gray-400 mb-1">Ports:</div>
+                ${portsList}
+            </div>
+        `;
+    }
+    
+    // Helper function to get auth token
+    function getToken() {
+        // First check localStorage
+        const token = localStorage.getItem('jwt_token');
+        if (token) {
+            return token;
+        }
+        
+        // Then check cookies
+        return getCookie('access_token');
+    }
+    
+    // Helper function to get cookie value
+    function getCookie(name) {
+        const value = `; ${document.cookie}`;
+        const parts = value.split(`; ${name}=`);
+        if (parts.length === 2) return parts.pop().split(';').shift();
+    }
+});
+</script>
 {% endblock %}
